@@ -1,6 +1,5 @@
 import streamlit as st
 import base64
-import os
 
 # 1. Configuración de la página
 st.set_page_config(
@@ -25,64 +24,65 @@ def get_base64_of_bin_file(bin_file):
 
 bg_base64 = get_base64_of_bin_file("imagen fondo 1.avif")
 
-# --- CSS AVANZADO: PANTALLA FIJA Y CAJAS TRANSPARENTES ---
+# --- CSS AVANZADO: BLOQUEO TOTAL DE SCROLL Y PANEL TIPO CAJA ---
 st.markdown(f"""
 <style>
-/* 1. Fondo de Pantalla Completo y FIJO (para que no se mueva al scrollear) */
+/* 1. ELIMINAR EL SCROLL (El movimiento de la pantalla) */
+html, body, .stApp {{
+    overflow: hidden !important; 
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100vh !important;
+}}
+
+/* Ocultar la barra superior invisible de Streamlit que causa el salto */
+header[data-testid="stHeader"] {{
+    display: none !important; 
+}}
+
+/* 2. FONDO DE PANTALLA */
 .stApp {{
     background-image: url("data:image/avif;base64,{bg_base64}");
     background-size: cover;
     background-position: center;
-    background-attachment: fixed;
-    height: 100vh !important; /* Fuerza a que la página ocupe solo el alto de la pantalla */
-    overflow: hidden !important; /* Desactiva el scroll de la página completa */
+    background-repeat: no-repeat;
 }}
 
-.stApp > header {{
-    background-color: transparent !important;
-}}
-
-/* 2. Estructura para Centrar el Panel */
+/* 3. CENTRADO ABSOLUTO (Convierte la pantalla en una mesa para centrar la caja) */
 .block-container {{
-    padding-top: 0vh !important; /* Ajuste para centrado vertical */
-    padding-bottom: 0vh !important;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 1200px !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important; 
+    align-items: center !important;
 }}
 
-/* Asegurar que el contenedor de columnas esté centrado */
-[data-testid="stVerticalBlock"] > [data-testid="stColumns"] {{
-    background-color: transparent !important;
-    align-items: center; 
-    justify-content: center;
-    height: 100%; /* Ocupa el centro vertical */
-}}
-
-/* 3. Panel Central (Vidrio Esmerilado) */
+/* 4. EL PANEL CENTRAL (Compacto, no estirado) */
 [data-testid="stColumn"]:nth-child(2) {{
-    background: rgba(255, 255, 255, 0.4); /* Blanco semi-transparente y claro */
-    backdrop-filter: blur(15px); 
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.5); 
-    padding: 30px 50px 40px 50px !important; 
+    background: rgba(255, 255, 255, 0.25) !important; /* Vidrio claro */
+    backdrop-filter: blur(15px) !important; 
+    -webkit-backdrop-filter: blur(15px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
     border-radius: 20px !important; 
-    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4); 
-    width: 420px !important; /* Ancho fijo y robusto */
-    max-width: 420px !important;
-    flex: none !important;
+    padding: 40px 50px !important; 
+    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.3) !important;
+    width: 420px !important; /* Ancho fijo */
+    min-width: 420px !important;
+    flex: none !important; 
+    height: auto !important; /* ESTO ARREGLA LO LARGO, se adapta al contenido */
 }}
 
-/* 4. Títulos y Textos */
+/* Textos y Títulos */
 [data-testid="stColumn"]:nth-child(2) h2 {{
     color: #1a1a1a !important;
-    text-align: center;
-    font-weight: 500; 
-    font-size: 2.2rem;
-    margin-bottom: 25px;
-    margin-top: 0px;
+    text-align: center !important;
+    font-weight: 500 !important;
+    font-size: 2rem !important;
+    margin-top: 0 !important;
+    margin-bottom: 25px !important;
 }}
 
 .stTextInput label p {{
@@ -91,33 +91,39 @@ st.markdown(f"""
     margin-bottom: 2px !important;
 }}
 
-/* --- 5. SOLUCIÓN CAJAS TRANSPARENTES (MÁS CLARAS Y LUMINOSAS) --- */
-.stTextInput input {{
-    /* Cambiamos a blanco semi-transparente para el efecto 'vidrio' claro */
-    background-color: rgba(255, 255, 255, 0.8) !important; 
-    border-radius: 8px !important;
-    border: 1px solid rgba(255, 255, 255, 1) !important;
-    color: #111 !important; /* Texto un poco más oscuro para buen contraste */
-    box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.2); /* Sombra interna sutil */
+/* 5. CAJAS DE TEXTO TRANSPARENTES (Efecto Vidrio Integrado) */
+div[data-baseweb="input"] {{
+    background-color: rgba(255, 255, 255, 0.35) !important; /* Más transparente */
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.6) !important;
 }}
 
-/* Brillo al hacer foco en la caja (claro e intenso) */
-.stTextInput input:focus {{
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.9) !important;
-    background-color: rgba(255, 255, 255, 0.95) !important;
+div[data-baseweb="input"]:focus-within {{
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    border: 1px solid white !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
 }}
 
-/* 6. Botón Rojo */
+/* Hace que el fondo real del input y el ojo sean invisibles para que se vea el contenedor */
+div[data-baseweb="input"] > div, div[data-baseweb="input"] input, div[data-baseweb="input"] button {{
+    background-color: transparent !important;
+}}
+
+div[data-baseweb="input"] input {{
+    color: #111 !important; /* Texto oscuro para que se lea bien */
+}}
+
+/* 6. BOTÓN ROJO */
 div.stButton > button {{
     background-color: #C01B1B !important; 
     color: white !important;
     border: none !important;
-    border-radius: 30px !important; /* Forma de píldora */
+    border-radius: 25px !important; 
     padding: 10px 20px !important;
     font-weight: bold !important;
     font-size: 1.1rem !important;
-    transition: all 0.3s ease !important;
-    margin-top: 25px !important; 
+    width: 100% !important;
+    margin-top: 20px !important; 
     box-shadow: 0 4px 15px rgba(192, 27, 27, 0.4) !important;
 }}
 
@@ -126,13 +132,11 @@ div.stButton > button:hover {{
     transform: translateY(-2px) !important;
 }}
 
-/* Centrar logo y reducir espacios */
 .centered-logo {{
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 10px;
-    margin-top: -15px; /* Sube el logo */
+    margin-bottom: 15px;
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -140,14 +144,12 @@ div.stButton > button:hover {{
 # --- PANTALLA DE INICIO DE SESIÓN ---
 if not st.session_state['logeado']:
     
-    # Usamos 3 columnas, la central (1.3) para el panel centrado
-    col1, col2, col3 = st.columns([1, 1.3, 1]) 
+    col1, col2, col3 = st.columns([1, 1, 1]) 
     
     with col2:
         st.markdown('<div class="centered-logo">', unsafe_allow_html=True)
         try:
-            # Tamaño de logo grande para impacto visual
-            st.image("logo.png", width=310)
+            st.image("logo.png", width=280)
         except:
             st.warning("⚠️ Recuerda subir 'logo.png' a GitHub.")
         st.markdown('</div>', unsafe_allow_html=True)
