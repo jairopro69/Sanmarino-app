@@ -41,7 +41,7 @@ st.markdown(f"""
 
 /* Estructura general */
 .block-container {{
-    padding-top: 10vh !important; /* Empuja un poco desde arriba */
+    padding-top: 12vh !important; 
     max-width: 1200px !important;
 }}
 
@@ -52,13 +52,14 @@ st.markdown(f"""
     justify-content: center;
 }}
 
-/* Panel Central (Más corto de altura, más ancho) */
+/* Panel Central (Comprimido verticalmente) */
 [data-testid="stColumn"]:nth-child(2) {{
     background: rgba(255, 255, 255, 0.35); 
     backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.5); 
-    padding: 30px 50px 40px 50px !important; /* Menos espacio arriba y abajo, más a los lados */
+    /* Reducimos el espacio arriba (20px) y abajo (25px) drásticamente */
+    padding: 20px 50px 25px 50px !important; 
     border-radius: 20px !important; 
     box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4); 
 }}
@@ -68,15 +69,20 @@ st.markdown(f"""
     color: #1a1a1a !important;
     text-align: center;
     font-weight: 500; 
-    font-size: 2rem;
-    margin-bottom: 20px;
-    margin-top: 0px;
+    font-size: 1.8rem;
+    margin-bottom: 10px; /* Menos espacio debajo del título */
+    margin-top: -5px; /* Sube el título */
 }}
 
 .stTextInput label p {{
     color: #2c2c2c !important;
     font-weight: 600 !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 0px !important; /* Quita el espacio debajo de la palabra "Usuario" */
+}}
+
+/* Reducir espacio extra que pone Streamlit entre elementos */
+[data-testid="stVerticalBlock"] {{
+    gap: 0.5rem !important; 
 }}
 
 /* Cajas de texto */
@@ -85,6 +91,7 @@ st.markdown(f"""
     border-radius: 8px !important;
     border: 1px solid rgba(255, 255, 255, 0.9) !important;
     color: #333 !important;
+    padding: 8px 15px !important; /* Cajas un poquito más delgadas */
 }}
 
 /* Botón Rojo */
@@ -93,11 +100,11 @@ div.stButton > button {{
     color: white !important;
     border: none !important;
     border-radius: 20px !important; 
-    padding: 10px 20px !important;
+    padding: 8px 20px !important; /* Botón un poquito más delgado */
     font-weight: bold !important;
     font-size: 1.1rem !important;
     transition: all 0.3s ease !important;
-    margin-top: 20px !important; 
+    margin-top: 10px !important; /* Menos espacio antes del botón */
     box-shadow: 0 4px 15px rgba(192, 27, 27, 0.4) !important;
 }}
 
@@ -111,8 +118,8 @@ div.stButton > button:hover {{
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 10px;
-    margin-top: -10px; /* Sube el logo un poquito */
+    margin-bottom: 5px; /* Menos espacio debajo del logo */
+    margin-top: 0px; 
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -120,13 +127,13 @@ div.stButton > button:hover {{
 # --- PANTALLA DE INICIO DE SESIÓN ---
 if not st.session_state['logeado']:
     
-    # Ajustamos proporciones para que el panel central sea más robusto (más ancho)
+    # Ajustamos proporciones para mantenerlo ancho
     col1, col2, col3 = st.columns([1, 1.4, 1]) 
     
     with col2:
         st.markdown('<div class="centered-logo">', unsafe_allow_html=True)
         try:
-            # Aumentamos el tamaño del logo
+            # Tamaño del logo grande mantenido
             st.image("logo.png", width=290)
         except:
             st.warning("⚠️ Recuerda subir 'logo.png' a GitHub.")
