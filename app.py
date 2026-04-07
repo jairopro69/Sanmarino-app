@@ -1,4 +1,6 @@
 import streamlit as st
+import base64
+import os
 
 # 1. Configuración de la página
 st.set_page_config(
@@ -12,134 +14,131 @@ if 'logeado' not in st.session_state:
     st.session_state['logeado'] = False
     st.session_state['rol'] = None
 
-# --- CSS AVANZADO Y AJUSTE DE PANTALLA ---
-st.markdown("""
+# --- FUNCIÓN DE IMAGEN DE FONDO ---
+# Esto lee tu archivo local y lo inyecta en el diseño (evita fallos de carga en la nube)
+def get_base64_of_bin_file(bin_file):
+    try:
+        with open(bin_file, 'rb') as f:
+            data = f.read()
+        return base64.b64encode(data).decode()
+    except Exception:
+        return ""
+
+# Cargamos tu nueva imagen de fondo
+bg_base64 = get_base64_of_bin_file("imagen fondo 1.avif")
+
+# --- CSS AVANZADO: EFECTO VIDRIO Y CENTRADO ---
+st.markdown(f"""
 <style>
-/* 1. Fondo de Pantalla Original */
-.stApp {
-    background-color: #0e1117; /* Color de respaldo */
-}
+/* 1. Fondo de Pantalla Completo */
+.stApp {{
+    background-image: url("data:image/avif;base64,{bg_base64}");
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}}
 
-/* 2. Reducir los espacios en blanco gigantes de Streamlit arriba y abajo */
-.block-container {
-    padding-top: 3rem !important; 
-    padding-bottom: 1rem !important;
-    max-width: 1100px !important; /* Evita que se estire demasiado a los lados */
-}
-
-/* 3. Quitar fondo por defecto de las columnas */
-[data-testid="stVerticalBlock"] > [data-testid="stColumns"] {
+/* Quitar fondos por defecto de Streamlit */
+.stApp > header {{
     background-color: transparent !important;
-    align-items: center; /* Centra los paneles verticalmente */
-}
+}}
 
-/* 4. Panel Izquierdo (Degradado oscuro) */
-[data-testid="stColumn"]:nth-child(1) {
-    background: linear-gradient(135deg, rgba(15, 15, 15, 0.98) 0%, rgba(60, 10, 10, 0.9) 100%);
-    padding: 40px 50px !important; /* Reduje el padding vertical para que quepa mejor */
-    color: white !important;
-    border-radius: 20px 0px 0px 20px; 
-    display: flex;
-    flex-direction: column;
+/* 2. Estructura para Centrar Todo */
+.block-container {{
+    padding-top: 5vh !important; 
+    max-width: 1200px !important;
+}}
+
+[data-testid="stVerticalBlock"] > [data-testid="stColumns"] {{
+    background-color: transparent !important;
+    align-items: center; 
     justify-content: center;
-    box-shadow: -5px 0px 20px rgba(0,0,0,0.3);
-    min-height: 60vh; /* Altura más controlada */
-}
+    margin-top: 8vh; /* Empuja el panel hacia el centro vertical de la pantalla */
+}}
 
-[data-testid="stColumn"]:nth-child(1) h1,
-[data-testid="stColumn"]:nth-child(1) p {
-    color: white !important;
-}
+/* 3. Panel Central (Efecto Vidrio Esmerilado) */
+[data-testid="stColumn"]:nth-child(2) {{
+    background: rgba(255, 255, 255, 0.35); /* Blanco semi-transparente */
+    backdrop-filter: blur(12px); /* Efecto de desenfoque del fondo */
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4); /* Borde sutil brillante */
+    padding: 50px 40px !important; 
+    border-radius: 25px !important; /* Bordes redondeados como en tu imagen */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); /* Sombra suave */
+}}
 
-/* 5. Panel Derecho (Blanco limpio) */
-[data-testid="stColumn"]:nth-child(2) {
-    background-color: rgba(255, 255, 255, 0.98); 
-    padding: 30px 50px !important; /* Reduje el padding para que no empuje el botón hacia abajo */
-    border-radius: 0px 20px 20px 0px; 
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    box-shadow: 10px 0px 25px rgba(0, 0, 0, 0.6); 
-    min-height: 60vh;
-}
-
-[data-testid="stColumn"]:nth-child(2) h2 {
+/* 4. Estilo de los Textos */
+[data-testid="stColumn"]:nth-child(2) h2 {{
     color: #1a1a1a !important;
     text-align: center;
-    font-weight: 700;
-    margin-top: 0px;
-    margin-bottom: 10px;
-}
+    font-weight: 400; /* Letra elegante y sin negrita gruesa */
+    font-size: 2.2rem;
+    margin-bottom: 25px;
+}}
 
-[data-testid="stColumn"]:nth-child(2) label {
-    color: #4a4a4a !important;
-    font-weight: 600;
-}
+.stTextInput label p {{
+    color: #2c2c2c !important;
+    font-weight: 600 !important;
+}}
 
-/* 6. Personalización del Botón al estilo San Marino */
-div.stButton > button {
-    background-color: #B31B1B !important;
+/* Cajas de texto estilizadas */
+.stTextInput input {{
+    background-color: rgba(255, 255, 255, 0.65) !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    color: #333 !important;
+}}
+
+/* 5. Personalización del Botón (Estilo Píldora Roja) */
+div.stButton > button {{
+    background-color: #C01B1B !important; /* Rojo San Marino */
     color: white !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 30px !important; /* Forma redondeada completa */
     padding: 10px 20px !important;
     font-weight: bold !important;
-    font-size: 1.1rem !important;
+    font-size: 1.2rem !important;
     transition: all 0.3s ease !important;
-    margin-top: 10px !important; /* Un pequeño empujón hacia abajo, pero controlado */
-}
+    margin-top: 25px !important; 
+    box-shadow: 0 4px 15px rgba(192, 27, 27, 0.5) !important;
+}}
 
-div.stButton > button:hover {
-    background-color: #8A1515 !important;
-    box-shadow: 0px 5px 15px rgba(179, 27, 27, 0.4) !important;
+div.stButton > button:hover {{
+    background-color: #9A1515 !important;
     transform: translateY(-2px) !important;
-}
+}}
 
-.centered-logo {
+/* Centrar logo */
+.centered-logo {{
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 15px;
-}
+    margin-bottom: 20px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
 # --- PANTALLA DE INICIO DE SESIÓN ---
 if not st.session_state['logeado']:
     
-    col1, col2 = st.columns([1.1, 1]) # Proporción ligeramente ajustada para balancear la pantalla
+    # Creamos 3 columnas. La central es donde irá el login.
+    # Proporción: 1 espacio vacío - 1.2 caja de login - 1 espacio vacío
+    col1, col2, col3 = st.columns([1, 1.2, 1]) 
     
-    # --- COLUMNA 1: PANEL IZQUIERDO ---
-    with col1:
-        st.markdown("<h1 style='font-size: 3.5rem; line-height: 1.1; margin-bottom: 0;'>Welcome<br>Back</h1>", unsafe_allow_html=True)
-        # Línea decorativa roja
-        st.markdown("<hr style='border: 2px solid #B31B1B; width: 60px; margin-left: 0; margin-top: 15px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size: 1.1rem;'>Bienvenido a San Marino motor logístico. Tenga precaución a los datos que va a ingresar.</p>", unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div style='display: flex; gap: 15px; font-size: 1.2rem; color: #aaa; margin-top: 30px;'>
-            🌐 ✉️ 🔒
-        </div>
-        """, unsafe_allow_html=True)
-
-    # --- COLUMNA 2: PANEL DERECHO (FORMULARIO Y LOGO) ---
+    # --- COLUMNA 2: PANEL CENTRAL ---
     with col2:
-        # Contenedor del logo
         st.markdown('<div class="centered-logo">', unsafe_allow_html=True)
         try:
-            # Forzamos un ancho para que no se estire de forma descontrolada hacia abajo
             st.image("logo.png", width=220)
         except:
-            st.warning("⚠️ Falta subir 'logo.png' a GitHub.")
+            st.warning("⚠️ Recuerda subir 'logo.png' a GitHub.")
         st.markdown('</div>', unsafe_allow_html=True)
         
         st.markdown("<h2>Iniciar Sesión</h2>", unsafe_allow_html=True)
         
-        # Campos de texto (Streamlit los apila automáticamente sin necesidad de espacios extra)
         usuario = st.text_input("Usuario")
         contrasena = st.text_input("Contraseña", type="password")
         
-        # Botón único
         if st.button("Iniciar Sesión", use_container_width=True):
             if usuario == "admin" and contrasena == "123":
                 st.session_state['logeado'] = True
