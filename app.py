@@ -71,12 +71,6 @@ st.markdown("""
     justify-content: center;
     margin-bottom: 20px;
 }
-.legal-text {
-    text-align: center;
-    color: #777;
-    font-size: 0.8rem;
-    margin-top: 20px;
-}
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,15 +81,10 @@ if not st.session_state['logeado']:
     
     # --- COLUMNA 1: PANEL IZQUIERDO ---
     with col1:
-        # Título principal en inglés como pediste
         st.markdown("<br><br><h1 style='font-size: 4rem;'>Welcome Back</h1>", unsafe_allow_html=True)
-        
-        # El texto pequeño modificado con tu advertencia
         st.markdown("<p style='font-size: 1.2rem;'>Bienvenido a San Marino motor logístico. Tenga precaución a los datos que va a ingresar.</p>", unsafe_allow_html=True)
-        
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Iconos de redes sociales
         st.markdown("""
         <div style='display: flex; gap: 15px; font-size: 1.5rem;'>
             🌐 ✉️ 🔒
@@ -107,7 +96,6 @@ if not st.session_state['logeado']:
     with col2:
         st.markdown("<br><br>", unsafe_allow_html=True)
         
-        # Logo de San Marino
         st.markdown('<div class="centered-logo">', unsafe_allow_html=True)
         try:
             st.image("logo.png", width=150)
@@ -118,30 +106,21 @@ if not st.session_state['logeado']:
         st.markdown("<h2>Iniciar Sesión</h2>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        usuario = st.text_input("Dirección de Correo Electrónico")
+        # Campos de texto simplificados
+        usuario = st.text_input("Usuario")
         contrasena = st.text_input("Contraseña", type="password")
         
-        col_rec, col_btn = st.columns([1, 1.5])
-        with col_rec:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.checkbox("Recuérdame", key='rem_checkbox')
-            
-        with col_btn:
-            if st.button("Iniciar sesión ahora", use_container_width=True):
-                if usuario == "admin" and contrasena == "123":
-                    st.session_state['logeado'] = True
-                    st.session_state['rol'] = "admin"
-                    st.rerun()
-                else:
-                    st.error("❌ Credenciales incorrectas.")
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        st.markdown("""
-        <div class="legal-text">
-            ¿Has olvidado tu contraseña?<br><br>
-            Al hacer clic en "Iniciar sesión ahora", aceptas los<br>
-            <a href="#">Términos de Servicio</a> | <a href="#">Política de Privacidad</a>
-        </div>
-        """, unsafe_allow_html=True)
+        # Botón único
+        if st.button("Iniciar Sesión", use_container_width=True):
+            if usuario == "admin" and contrasena == "123":
+                st.session_state['logeado'] = True
+                st.session_state['rol'] = "admin"
+                st.rerun()
+            else:
+                st.error("❌ Credenciales incorrectas.")
+        
         st.markdown("<br><br><br>", unsafe_allow_html=True)
 
 # --- PANTALLA INTERNA (ADMINISTRADOR) ---
