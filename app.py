@@ -1,6 +1,5 @@
 import streamlit as st
 import base64
-import os
 
 # 1. Configuración de la página
 st.set_page_config(
@@ -15,7 +14,6 @@ if 'logeado' not in st.session_state:
     st.session_state['rol'] = None
 
 # --- FUNCIÓN DE IMAGEN DE FONDO ---
-# Esto lee tu archivo local y lo inyecta en el diseño (evita fallos de carga en la nube)
 def get_base64_of_bin_file(bin_file):
     try:
         with open(bin_file, 'rb') as f:
@@ -24,13 +22,12 @@ def get_base64_of_bin_file(bin_file):
     except Exception:
         return ""
 
-# Cargamos tu nueva imagen de fondo
 bg_base64 = get_base64_of_bin_file("imagen fondo 1.avif")
 
-# --- CSS AVANZADO: EFECTO VIDRIO Y CENTRADO ---
+# --- CSS AVANZADO: EFECTO VIDRIO COMPACTO Y ROBUSTO ---
 st.markdown(f"""
 <style>
-/* 1. Fondo de Pantalla Completo */
+/* Fondo de Pantalla */
 .stApp {{
     background-image: url("data:image/avif;base64,{bg_base64}");
     background-size: cover;
@@ -38,69 +35,70 @@ st.markdown(f"""
     background-attachment: fixed;
 }}
 
-/* Quitar fondos por defecto de Streamlit */
 .stApp > header {{
     background-color: transparent !important;
 }}
 
-/* 2. Estructura para Centrar Todo */
+/* Estructura general */
 .block-container {{
-    padding-top: 5vh !important; 
+    padding-top: 10vh !important; /* Empuja un poco desde arriba */
     max-width: 1200px !important;
 }}
 
+/* Alinear columnas al centro */
 [data-testid="stVerticalBlock"] > [data-testid="stColumns"] {{
     background-color: transparent !important;
     align-items: center; 
     justify-content: center;
-    margin-top: 8vh; /* Empuja el panel hacia el centro vertical de la pantalla */
 }}
 
-/* 3. Panel Central (Efecto Vidrio Esmerilado) */
+/* Panel Central (Más corto de altura, más ancho) */
 [data-testid="stColumn"]:nth-child(2) {{
-    background: rgba(255, 255, 255, 0.35); /* Blanco semi-transparente */
-    backdrop-filter: blur(12px); /* Efecto de desenfoque del fondo */
+    background: rgba(255, 255, 255, 0.35); 
+    backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4); /* Borde sutil brillante */
-    padding: 50px 40px !important; 
-    border-radius: 25px !important; /* Bordes redondeados como en tu imagen */
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); /* Sombra suave */
+    border: 1px solid rgba(255, 255, 255, 0.5); 
+    padding: 30px 50px 40px 50px !important; /* Menos espacio arriba y abajo, más a los lados */
+    border-radius: 20px !important; 
+    box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.4); 
 }}
 
-/* 4. Estilo de los Textos */
+/* Textos y Títulos */
 [data-testid="stColumn"]:nth-child(2) h2 {{
     color: #1a1a1a !important;
     text-align: center;
-    font-weight: 400; /* Letra elegante y sin negrita gruesa */
-    font-size: 2.2rem;
-    margin-bottom: 25px;
+    font-weight: 500; 
+    font-size: 2rem;
+    margin-bottom: 20px;
+    margin-top: 0px;
 }}
 
 .stTextInput label p {{
     color: #2c2c2c !important;
     font-weight: 600 !important;
+    margin-bottom: 2px !important;
 }}
 
-/* Cajas de texto estilizadas */
+/* Cajas de texto */
 .stTextInput input {{
-    background-color: rgba(255, 255, 255, 0.65) !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
     color: #333 !important;
 }}
 
-/* 5. Personalización del Botón (Estilo Píldora Roja) */
+/* Botón Rojo */
 div.stButton > button {{
-    background-color: #C01B1B !important; /* Rojo San Marino */
+    background-color: #C01B1B !important; 
     color: white !important;
     border: none !important;
-    border-radius: 30px !important; /* Forma redondeada completa */
+    border-radius: 20px !important; 
     padding: 10px 20px !important;
     font-weight: bold !important;
-    font-size: 1.2rem !important;
+    font-size: 1.1rem !important;
     transition: all 0.3s ease !important;
-    margin-top: 25px !important; 
-    box-shadow: 0 4px 15px rgba(192, 27, 27, 0.5) !important;
+    margin-top: 20px !important; 
+    box-shadow: 0 4px 15px rgba(192, 27, 27, 0.4) !important;
 }}
 
 div.stButton > button:hover {{
@@ -108,12 +106,13 @@ div.stButton > button:hover {{
     transform: translateY(-2px) !important;
 }}
 
-/* Centrar logo */
+/* Contenedor del Logo */
 .centered-logo {{
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    margin-top: -10px; /* Sube el logo un poquito */
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -121,15 +120,14 @@ div.stButton > button:hover {{
 # --- PANTALLA DE INICIO DE SESIÓN ---
 if not st.session_state['logeado']:
     
-    # Creamos 3 columnas. La central es donde irá el login.
-    # Proporción: 1 espacio vacío - 1.2 caja de login - 1 espacio vacío
-    col1, col2, col3 = st.columns([1, 1.2, 1]) 
+    # Ajustamos proporciones para que el panel central sea más robusto (más ancho)
+    col1, col2, col3 = st.columns([1, 1.4, 1]) 
     
-    # --- COLUMNA 2: PANEL CENTRAL ---
     with col2:
         st.markdown('<div class="centered-logo">', unsafe_allow_html=True)
         try:
-            st.image("logo.png", width=220)
+            # Aumentamos el tamaño del logo
+            st.image("logo.png", width=290)
         except:
             st.warning("⚠️ Recuerda subir 'logo.png' a GitHub.")
         st.markdown('</div>', unsafe_allow_html=True)
