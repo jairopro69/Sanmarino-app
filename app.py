@@ -180,27 +180,20 @@ else:
     # --- CSS EXCLUSIVO DEL PANEL DE TRABAJO ---
     st.markdown("""
     <style>
-    /* Quitar la imagen de fondo y poner el color sólido más claro que #262730 */
     .stApp {
         background-image: none !important;
         background-color: #353846 !important; 
     }
-    
-    /* Restaurar el scroll normal para poder bajar si hay tablas grandes */
     html, body {
         overflow: auto !important; 
         height: auto !important;
     }
-    
-    /* Restaurar el contenedor normal (quitar el centrado forzado del login) */
     .block-container {
         padding-top: 3rem !important; 
         display: block !important;
-        max-width: 95% !important; /* Aprovecha el ancho de la pantalla */
+        max-width: 95% !important; 
     }
-    
-    /* Cambiar el color del texto principal para que resalte en el fondo oscuro */
-    h1, h2, h3, p, span {
+    h1, h2, h3, p, span, label {
         color: #F0F2F6 !important;
     }
     
@@ -212,30 +205,55 @@ else:
         border-radius: 8px !important; 
         width: 100% !important;
     }
+    
+    /* Estilo para los botones de las Maestras (Color gris oscuro elegante) */
+    div[data-testid="stExpanderDetails"] div.stButton > button {
+        background-color: #262730 !important;
+        border: 1px solid #4a4c59 !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    div[data-testid="stExpanderDetails"] div.stButton > button:hover {
+        border-color: #C01B1B !important;
+        color: #C01B1B !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- ESTRUCTURA DEL PANEL ---
-    # Menú lateral
+    # --- MENÚ LATERAL ---
     st.sidebar.title("San Marino")
-    try:
-        st.sidebar.image("logo.png", use_container_width=True)
-    except:
-        pass
+    # (¡Logo eliminado de aquí como pediste!)
         
     if st.sidebar.button("Cerrar Sesión"):
         st.session_state['logeado'] = False
         st.session_state['rol'] = None
         st.rerun()
 
-    # Contenido principal
+    # --- CONTENIDO PRINCIPAL ---
     if st.session_state['rol'] == "admin":
         st.title("🚀 Panel de Administración Logística")
         st.write("Bienvenido, Administrador. Este es el centro de control principal.")
-        st.success("¡Inicio de sesión exitoso! El sistema está listo para operar.")
+        st.markdown("---") 
         
-        st.markdown("---") # Línea divisoria
+        # --- SECCIÓN: MAESTRAS (BOTÓN DESPLEGABLE) ---
+        with st.expander("📁 Maestras", expanded=True):
+            st.write("Seleccione el registro que desea consultar o modificar:")
+            
+            # Usamos 5 columnas para forzar a que los botones queden en el centro
+            # Los números [1, 2, 2, 2, 1] representan el ancho. Las columnas de las orillas (1) actúan como márgenes vacíos.
+            espacio_izq, col_centro1, col_centro2, col_centro3, espacio_der = st.columns([1, 2, 2, 2, 1])
+            
+            with col_centro1:
+                st.button("🧑‍✈️ Conductores", use_container_width=True)
+                st.button("🤝 Vendedores", use_container_width=True)
+            with col_centro2:
+                st.button("🚚 Carros", use_container_width=True)
+                st.button("🗺️ Rutas", use_container_width=True)
+            with col_centro3:
+                st.button("🏢 Clientes", use_container_width=True)
+                st.button("💉 Vacunas", use_container_width=True)
+                
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        # Aquí empezaremos a poner nuestras tablas e información real
-        st.subheader("Resumen de Operaciones")
-        st.info("Pronto conectaremos aquí los archivos de pedidos y flota de vehículos.")
+        # --- OTRAS SECCIONES FUTURAS ---
+        st.subheader("📊 Resumen de Operaciones")
+        st.info("Pronto conectaremos aquí el cruce automático de datos y asignación de viajes.")
