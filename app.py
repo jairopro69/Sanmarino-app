@@ -22,8 +22,9 @@ if 'menu_actual' not in st.session_state:
     st.session_state['menu_actual'] = "Despachos" 
 if 'maestra_actual' not in st.session_state:
     st.session_state['maestra_actual'] = None
-if 'producto_seleccionado' not in st.session_state:
-    st.session_state['producto_seleccionado'] = None
+# NUEVO: Memoria para guardar el Excel de ventas y no perderlo al cambiar de menú
+if 'df_ventas' not in st.session_state:
+    st.session_state['df_ventas'] = None
 
 # ==========================================
 # 3. CONSTANTES Y DICCIONARIOS
@@ -106,33 +107,41 @@ else:
     
     /* Botones del Menú Lateral */
     .btn-cerrar div.stButton > button { background-color: #C01B1B !important; color: white !important; border: none !important; border-radius: 8px !important; width: 100% !important; }
-    .btn-menu div.stButton > button { background-color: #262730 !important; color: white !important; border: 1px solid #4a4c59 !important; border-radius: 8px !important; width: 100% !important; text-align: left !important; padding-left: 20px !important; margin-bottom: 5px !important;}
-    .btn-menu div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
+    
+    /* Diseño de los botones del menú lateral para que se vean como los tuyos */
+    .btn-menu div.stButton > button { background-color: #262730 !important; color: white !important; border: 1px solid #4a4c59 !important; border-radius: 8px !important; width: 100% !important; text-align: left !important; padding-left: 20px !important; margin-bottom: 5px !important; transition: all 0.2s;}
+    .btn-menu div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; background-color: #1e1f26 !important;}
+    
+    /* Diseño específico para los sub-botones de productos */
+    .btn-sub-menu div.stButton > button { background-color: transparent !important; color: #b0b3c6 !important; border: none !important; border-left: 3px solid transparent !important; border-radius: 0px !important; width: 100% !important; text-align: left !important; padding-left: 40px !important; margin-bottom: 2px !important; font-size: 0.95rem !important;}
+    .btn-sub-menu div.stButton > button:hover { color: white !important; border-left: 3px solid #C01B1B !important; background-color: rgba(255,255,255,0.05) !important;}
     
     /* Botones de Maestras */
     div[data-testid="stExpanderDetails"] div.stButton > button { background-color: #262730 !important; border: 1px solid #4a4c59 !important; transition: all 0.2s ease-in-out !important; }
     div[data-testid="stExpanderDetails"] div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
-    
-    /* Estilo de los 3 Botones Grandes de Productos */
-    .btn-producto div.stButton > button { background-color: #262730 !important; border: 2px solid #4a4c59 !important; border-radius: 10px !important; color: white !important; height: 70px !important; font-size: 1.2rem !important; transition: all 0.2s ease-in-out !important; }
-    .btn-producto div.stButton > button:hover { border-color: #C01B1B !important; background-color: #1e1f26 !important; transform: translateY(-3px) !important; box-shadow: 0 5px 15px rgba(192, 27, 27, 0.3) !important; }
     
     /* Cargador de archivos */
     [data-testid="stFileUploader"] { background-color: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border: 2px dashed #4a4c59; }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- MENÚ LATERAL ---
+    # --- MENÚ LATERAL EXACTAMENTE COMO LO PEDISTE ---
     st.sidebar.title("San Marino")
     st.sidebar.markdown("---")
     
     st.sidebar.markdown('<div class="btn-menu">', unsafe_allow_html=True)
-    if st.sidebar.button("📦 Programar Despachos"): 
-        st.session_state['menu_actual'] = "Despachos"
-        st.session_state['producto_seleccionado'] = None # Reinicia la selección al volver al menú
-        
-    if st.sidebar.button("📁 Bases de Datos (Maestras)"): 
-        st.session_state['menu_actual'] = "Maestras"
+    if st.sidebar.button("📦 Programar Despachos"): st.session_state['menu_actual'] = "Despachos"
+    if st.sidebar.button("📁 Bases de Datos (Maestras)"): st.session_state['menu_actual'] = "Maestras"
+    st.sidebar.markdown('</div>', unsafe_allow_html=True)
+    
+    # Separador sutil para los productos
+    st.sidebar.markdown("<hr style='margin: 10px 0; border-color: #4a4c59;'>", unsafe_allow_html=True)
+    
+    # Los 3 nuevos botones integrados en el menú lateral
+    st.sidebar.markdown('<div class="btn-sub-menu">', unsafe_allow_html=True)
+    if st.sidebar.button("🥚 Huevo"): st.session_state['menu_actual'] = "Huevo"
+    if st.sidebar.button("🌽 Alimento"): st.session_state['menu_actual'] = "Alimento"
+    if st.sidebar.button("🐥 Pollito"): st.session_state['menu_actual'] = "Pollito"
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
     
     st.sidebar.markdown("<br><br><br><br>", unsafe_allow_html=True)
@@ -143,40 +152,33 @@ else:
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
-    # SECCIÓN: PROGRAMAR DESPACHOS
+    # SECCIÓN: PROGRAMAR DESPACHOS (SUBIDA DE ARCHIVO)
     # ==========================================
     if st.session_state['menu_actual'] == "Despachos":
-        st.title("📦 Motor de Asignación y Despachos")
-        st.write("Sube el archivo de Excel del **Área de Ventas** y luego haz clic en el producto que deseas programar.")
+        st.title("📦 Carga de Pedidos")
+        st.write("1. Sube aquí el archivo de Excel del **Área de Ventas**.")
+        st.write("2. Luego selecciona en el menú lateral izquierdo qué línea vas a programar (Huevo, Alimento o Pollito).")
         
-        # 1. EL CARGADOR DE ARCHIVOS (Siempre arriba)
         archivo_ventas = st.file_uploader("Arrastra tu Excel de Ventas aquí", type=["xlsx", "xls"], key="up_ventas")
         
         if archivo_ventas is not None:
-            st.success("✅ Archivo cargado correctamente.")
-            df_ventas = pd.read_excel(archivo_ventas)
+            # GUARDAMOS EL ARCHIVO EN LA MEMORIA DE PYTHON
+            st.session_state['df_ventas'] = pd.read_excel(archivo_ventas)
+            st.success("✅ Archivo cargado y guardado en la memoria del sistema.")
+            st.info("👉 Ahora haz clic en **Huevo**, **Alimento** o **Pollito** en el menú de la izquierda para generar las rutas.")
+
+    # ==========================================
+    # SECCIÓN: CÁLCULO HUEVO
+    # ==========================================
+    elif st.session_state['menu_actual'] == "Huevo":
+        st.title("🥚 Programación de Rutas: HUEVO")
+        
+        # Verificamos si el usuario ya subió el archivo en "Despachos"
+        if st.session_state['df_ventas'] is not None:
+            df_ventas = st.session_state['df_ventas']
             
-            st.markdown("### Selecciona la línea de negocio a procesar:")
-            
-            # 2. LOS 3 BOTONES DE PRODUCTOS (Debajo del cargador)
-            st.markdown('<div class="btn-producto">', unsafe_allow_html=True)
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("🥚 Programar HUEVO", use_container_width=True):
-                    st.session_state['producto_seleccionado'] = "Huevo"
-            with col2:
-                if st.button("🌽 Programar ALIMENTO", use_container_width=True):
-                    st.session_state['producto_seleccionado'] = "Alimento"
-            with col3:
-                if st.button("🐥 Programar POLLITO", use_container_width=True):
-                    st.session_state['producto_seleccionado'] = "Pollito"
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-            st.markdown("---")
-            
-            # 3. LÓGICA DE CADA BOTÓN (Se muestra debajo al hacer clic)
-            if st.session_state['producto_seleccionado'] == "Huevo":
-                st.subheader("🚛 Cálculo de Rutas: HUEVO")
+            st.info("Utilizando el archivo de ventas cargado previamente.")
+            if st.button("🚀 Calcular Viajes Necesarios", use_container_width=True):
                 with st.spinner('Analizando granjas y cruzando con carros tipo Huevo...'):
                     time.sleep(1) 
                     try:
@@ -184,7 +186,7 @@ else:
                         carros_huevo = df_carros[df_carros.astype(str).apply(lambda x: x.str.contains('Huevo', case=False, na=False)).any(axis=1)]
                         num_carros_disp = len(carros_huevo)
                     except FileNotFoundError:
-                        st.error(f"Falta el archivo '{ARCHIVOS_EXCEL['Carros']}'.")
+                        st.error(f"Falta el archivo maestra '{ARCHIVOS_EXCEL['Carros']}'.")
                         num_carros_disp = 0
                     except Exception:
                         num_carros_disp = 10 
@@ -193,36 +195,51 @@ else:
                         resumen_granjas = df_ventas.groupby('Granja')['Cantidad'].sum().reset_index()
                         total_viajes_global = 0
                         
+                        st.markdown("---")
                         col_info, col_metric = st.columns([2,1])
                         with col_info:
+                            st.write("### 📋 Resumen Logístico")
                             for index, fila in resumen_granjas.iterrows():
                                 granja = fila['Granja']
                                 cantidad = fila['Cantidad']
                                 viajes = math.ceil(cantidad / 200) 
                                 total_viajes_global += viajes
-                                st.write(f"📍 **{granja}**: {cantidad} cajas → **{viajes}** viajes.")
+                                st.write(f"📍 **{granja}**: {cantidad} cajas → Requiere **{viajes}** viajes.")
                         
                         with col_metric:
                             st.metric("Total Camiones Necesitados", total_viajes_global)
                         
+                        st.markdown("---")
                         if num_carros_disp > 0:
                             if total_viajes_global > num_carros_disp:
-                                st.error(f"⚠️ ¡ALERTA! Necesitas {total_viajes_global} carros pero solo tienes {num_carros_disp} tipo Huevo.")
+                                st.error(f"⚠️ ¡ALERTA! Necesitas {total_viajes_global} carros pero tu maestra indica que solo tienes {num_carros_disp} tipo Huevo.")
                             else:
                                 st.success(f"✅ ¡Flota suficiente! Tienes {num_carros_disp} carros tipo Huevo disponibles.")
                                 st.balloons()
                                 
                     except KeyError:
-                        st.error("❌ El archivo subido no tiene las columnas 'Granja' o 'Cantidad'.")
+                        st.error("❌ El archivo subido no tiene las columnas 'Granja' o 'Cantidad'. Verifica el formato.")
+        else:
+            # Si no ha subido el archivo, le avisamos
+            st.warning("⚠️ Aún no has cargado los pedidos del día.")
+            st.info("Por favor, ve a la sección **📦 Programar Despachos** en el menú y sube tu archivo de Excel primero.")
 
-            elif st.session_state['producto_seleccionado'] == "Alimento":
-                st.subheader("🚛 Cálculo de Rutas: ALIMENTO")
-                st.info("🚧 Módulo de Alimento en construcción. Aquí aplicaremos las reglas de peso para camiones de estacas/bultos.")
+    # ==========================================
+    # SECCIÓN: ALIMENTO Y POLLITO
+    # ==========================================
+    elif st.session_state['menu_actual'] == "Alimento":
+        st.title("🌽 Programación de Rutas: ALIMENTO")
+        if st.session_state['df_ventas'] is not None:
+            st.info("🚧 Módulo de Alimento en construcción. Aquí aplicaremos las reglas de peso para camiones de estacas usando el archivo que ya subiste.")
+        else:
+            st.warning("⚠️ Primero debes subir el archivo de Excel en la sección **Programar Despachos**.")
 
-            elif st.session_state['producto_seleccionado'] == "Pollito":
-                st.subheader("🚛 Cálculo de Rutas: POLLITO")
-                st.info("🚧 Módulo de Pollito en construcción. Aquí aplicaremos las reglas exclusivas para camiones climatizados.")
-
+    elif st.session_state['menu_actual'] == "Pollito":
+        st.title("🐥 Programación de Rutas: POLLITO")
+        if st.session_state['df_ventas'] is not None:
+            st.info("🚧 Módulo de Pollito en construcción. Aquí aplicaremos las reglas exclusivas para camiones climatizados usando el archivo que ya subiste.")
+        else:
+            st.warning("⚠️ Primero debes subir el archivo de Excel en la sección **Programar Despachos**.")
 
     # ==========================================
     # SECCIÓN: BASES DE DATOS (MAESTRAS)
