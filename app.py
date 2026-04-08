@@ -18,14 +18,14 @@ if 'maestra_actual' not in st.session_state:
     st.session_state['maestra_actual'] = None
 
 # --- DICCIONARIO DE ARCHIVOS EXACTOS ---
-# Aquí enlazamos el botón con el nombre exacto de tu archivo en GitHub
 ARCHIVOS_EXCEL = {
-    "Conductores": "Conductores Sanmarino.xlsx", # Nota la 'S' mayúscula que pusiste
+    "Conductores": "Conductores Sanmarino.xlsx", 
     "Vendedores": "Vendedores sanmarino.xlsx",
     "Carros": "Carros sanmarino.xlsx",
     "Rutas": "Rutas sanmarino.xlsx",
     "Clientes": "Clientes sanmarino.xlsx",
-    "Vacunas": "Vacunas sanmarino.xlsx"
+    "Vacunas": "Vacunas sanmarino.xlsx",
+    "Granjas": "Granjas sanmarino.xlsx" # <--- ¡Nueva Maestra agregada!
 }
 
 # --- FUNCIÓN DE IMAGEN DE FONDO (Solo para el login) ---
@@ -124,6 +124,7 @@ else:
             with col_centro1:
                 if st.button("🧑‍✈️ Conductores", use_container_width=True): st.session_state['maestra_actual'] = "Conductores"
                 if st.button("🤝 Vendedores", use_container_width=True): st.session_state['maestra_actual'] = "Vendedores"
+                if st.button("🐔 Granjas", use_container_width=True): st.session_state['maestra_actual'] = "Granjas"
             with col_centro2:
                 if st.button("🚚 Carros", use_container_width=True): st.session_state['maestra_actual'] = "Carros"
                 if st.button("🗺️ Rutas", use_container_width=True): st.session_state['maestra_actual'] = "Rutas"
@@ -139,14 +140,13 @@ else:
         if st.session_state['maestra_actual']:
             
             nombre_maestra = st.session_state['maestra_actual']
-            # Usamos nuestro diccionario para obtener el nombre exacto del archivo
             nombre_archivo_exacto = ARCHIVOS_EXCEL[nombre_maestra]
             
             st.subheader(f"Gestión de Datos: {nombre_maestra}")
             st.write("Instrucciones: Haz doble clic en cualquier celda para editar. Para agregar una nueva fila, escribe en la última fila vacía con el símbolo (+). Para borrar, selecciona la casilla izquierda de la fila y presiona la tecla Suprimir/Delete.")
             
             try:
-                # Leemos el archivo usando el nombre exacto
+                # Leemos el archivo
                 df = pd.read_excel(nombre_archivo_exacto)
                 
                 df_editado = st.data_editor(
@@ -157,7 +157,6 @@ else:
                 )
                 
                 if st.button(f"💾 Guardar cambios en {nombre_maestra}"):
-                    # Guardamos respetando el nombre original
                     df_editado.to_excel(nombre_archivo_exacto, index=False)
                     st.success(f"¡Base de datos '{nombre_archivo_exacto}' actualizada con éxito!")
                     
