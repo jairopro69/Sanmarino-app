@@ -19,7 +19,7 @@ st.set_page_config(
 if 'logeado' not in st.session_state:
     st.session_state['logeado'] = False
 if 'menu_actual' not in st.session_state:
-    st.session_state['menu_actual'] = "Huevo" # Cambiamos el inicio por defecto a Huevo
+    st.session_state['menu_actual'] = "Despachos" # Vuelve a ser el menú principal
 if 'maestra_actual' not in st.session_state:
     st.session_state['maestra_actual'] = None
 
@@ -102,6 +102,7 @@ else:
     .block-container { padding-top: 2rem !important; display: block !important; max-width: 95% !important; }
     h1, h2, h3, p, span, label, li { color: #F0F2F6 !important; }
     
+    /* Menú lateral restaurado a 2 botones */
     .btn-cerrar div.stButton > button { background-color: #C01B1B !important; color: white !important; border: none !important; border-radius: 8px !important; width: 100% !important; }
     .btn-menu div.stButton > button { background-color: #262730 !important; color: white !important; border: 1px solid #4a4c59 !important; border-radius: 8px !important; width: 100% !important; text-align: left !important; padding-left: 20px !important; margin-bottom: 5px !important;}
     .btn-menu div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
@@ -110,6 +111,11 @@ else:
     div[data-testid="stExpanderDetails"] div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
     
     [data-testid="stFileUploader"] { background-color: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border: 2px dashed #4a4c59; }
+    
+    /* Estilizar las pestañas nativas de Streamlit */
+    .stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 10px; }
+    .stTabs [data-baseweb="tab"] { background-color: rgba(255,255,255,0.05); border-radius: 8px 8px 0px 0px; padding: 10px 20px; color: #aaa !important; }
+    .stTabs [aria-selected="true"] { background-color: rgba(255,255,255,0.1) !important; color: #fff !important; border-bottom: 3px solid #C01B1B !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -117,14 +123,8 @@ else:
     st.sidebar.title("San Marino")
     st.sidebar.markdown("---")
     
-    # --- NUEVOS BOTONES DEL MENÚ ---
     st.sidebar.markdown('<div class="btn-menu">', unsafe_allow_html=True)
-    if st.sidebar.button("🥚 Huevo"): st.session_state['menu_actual'] = "Huevo"
-    if st.sidebar.button("🌽 Alimento"): st.session_state['menu_actual'] = "Alimento"
-    if st.sidebar.button("🐥 Pollito"): st.session_state['menu_actual'] = "Pollito"
-    
-    st.sidebar.markdown("<br>", unsafe_allow_html=True) # Espacio visual
-    
+    if st.sidebar.button("📦 Programar Despachos"): st.session_state['menu_actual'] = "Despachos"
     if st.sidebar.button("📁 Bases de Datos (Maestras)"): st.session_state['menu_actual'] = "Maestras"
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
     
@@ -136,23 +136,27 @@ else:
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ==========================================
-    # PESTAÑA: HUEVO
+    # SECCIÓN: PROGRAMAR DESPACHOS
     # ==========================================
-    if st.session_state['menu_actual'] == "Huevo":
-        st.title("🥚 Programación de Despachos: HUEVO")
-        st.write("Sube el archivo de Excel del **Área de Ventas** para calcular requerimientos de recolección de Huevo.")
+    if st.session_state['menu_actual'] == "Despachos":
+        st.title("📦 Motor de Asignación y Despachos")
+        st.write("Sube el archivo de Excel del **Área de Ventas** y selecciona la pestaña del producto que deseas programar.")
         
-        archivo_ventas = st.file_uploader("Arrastra tu Excel de Ventas aquí", type=["xlsx", "xls"], key="up_huevo")
+        # EL CARGADOR DE ARCHIVOS ÚNICO (Arriba de todo)
+        archivo_ventas = st.file_uploader("Arrastra tu Excel de Ventas aquí", type=["xlsx", "xls"], key="up_ventas")
         
         if archivo_ventas is not None:
-            st.success("✅ Archivo cargado correctamente.")
+            st.success("✅ Archivo cargado correctamente. Selecciona el tipo de producto abajo:")
             df_ventas = pd.read_excel(archivo_ventas)
             
-            st.markdown("---")
-            col_izq, col_der = st.columns([2, 1])
-            with col_izq:
+            # --- PESTAÑAS NATIVAS DE STREAMLIT ---
+            tab_huevo, tab_alimento, tab_pollito = st.tabs(["🥚 HUEVO", "🌽 ALIMENTO", "🐥 POLLITO"])
+            
+            # --- PESTAÑA: HUEVO ---
+            with tab_huevo:
+                st.subheader("Programación de Recolección de Huevo")
                 st.info("El sistema agrupará los pedidos por Granja y calculará los viajes necesarios usando camiones tipo 'Huevo' (Capacidad: 200 cajas).")
-            with col_der:
+                
                 if st.button("🚀 Calcular Viajes (Huevo)", use_container_width=True):
                     with st.spinner('Analizando datos y cruzando con la flota disponible...'):
                         time.sleep(2) 
@@ -168,7 +172,8 @@ else:
                         
                         try:
                             resumen_granjas = df_ventas.groupby('Granja')['Cantidad'].sum().reset_index()
-                            st.subheader("📋 Resumen Logístico de Recolección (Huevo)")
+                            st.markdown("---")
+                            st.write("### 📋 Resumen Logístico")
                             total_viajes_global = 0
                             
                             for index, fila in resumen_granjas.iterrows():
@@ -191,22 +196,19 @@ else:
                         except KeyError:
                             st.error("❌ El archivo subido no tiene las columnas 'Granja' o 'Cantidad'. Verifica el formato.")
 
-    # ==========================================
-    # PESTAÑA: ALIMENTO
-    # ==========================================
-    elif st.session_state['menu_actual'] == "Alimento":
-        st.title("🌽 Programación de Despachos: ALIMENTO")
-        st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas de peso/volumen exclusivas para el transporte de alimento.")
+            # --- PESTAÑA: ALIMENTO ---
+            with tab_alimento:
+                st.subheader("Programación de Alimento")
+                st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas de peso/volumen exclusivas para el transporte de alimento usando los datos del archivo cargado arriba.")
+
+            # --- PESTAÑA: POLLITO ---
+            with tab_pollito:
+                st.subheader("Programación de Pollito")
+                st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas exclusivas para los carros climatizados de pollitos usando los datos del archivo cargado arriba.")
+
 
     # ==========================================
-    # PESTAÑA: POLLITO
-    # ==========================================
-    elif st.session_state['menu_actual'] == "Pollito":
-        st.title("🐥 Programación de Despachos: POLLITO")
-        st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas exclusivas para los carros climatizados de pollitos.")
-
-    # ==========================================
-    # PESTAÑA: BASES DE DATOS (MAESTRAS)
+    # SECCIÓN: BASES DE DATOS (MAESTRAS)
     # ==========================================
     elif st.session_state['menu_actual'] == "Maestras":
         st.title("📁 Gestión de Bases de Datos")
