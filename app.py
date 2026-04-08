@@ -19,9 +19,11 @@ st.set_page_config(
 if 'logeado' not in st.session_state:
     st.session_state['logeado'] = False
 if 'menu_actual' not in st.session_state:
-    st.session_state['menu_actual'] = "Despachos" # Vuelve a ser el menú principal
+    st.session_state['menu_actual'] = "Despachos" 
 if 'maestra_actual' not in st.session_state:
     st.session_state['maestra_actual'] = None
+if 'producto_seleccionado' not in st.session_state:
+    st.session_state['producto_seleccionado'] = None
 
 # ==========================================
 # 3. CONSTANTES Y DICCIONARIOS
@@ -102,20 +104,21 @@ else:
     .block-container { padding-top: 2rem !important; display: block !important; max-width: 95% !important; }
     h1, h2, h3, p, span, label, li { color: #F0F2F6 !important; }
     
-    /* Menú lateral restaurado a 2 botones */
+    /* Botones del Menú Lateral */
     .btn-cerrar div.stButton > button { background-color: #C01B1B !important; color: white !important; border: none !important; border-radius: 8px !important; width: 100% !important; }
     .btn-menu div.stButton > button { background-color: #262730 !important; color: white !important; border: 1px solid #4a4c59 !important; border-radius: 8px !important; width: 100% !important; text-align: left !important; padding-left: 20px !important; margin-bottom: 5px !important;}
     .btn-menu div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
     
+    /* Botones de Maestras */
     div[data-testid="stExpanderDetails"] div.stButton > button { background-color: #262730 !important; border: 1px solid #4a4c59 !important; transition: all 0.2s ease-in-out !important; }
     div[data-testid="stExpanderDetails"] div.stButton > button:hover { border-color: #C01B1B !important; color: #C01B1B !important; }
     
-    [data-testid="stFileUploader"] { background-color: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border: 2px dashed #4a4c59; }
+    /* Estilo de los 3 Botones Grandes de Productos */
+    .btn-producto div.stButton > button { background-color: #262730 !important; border: 2px solid #4a4c59 !important; border-radius: 10px !important; color: white !important; height: 70px !important; font-size: 1.2rem !important; transition: all 0.2s ease-in-out !important; }
+    .btn-producto div.stButton > button:hover { border-color: #C01B1B !important; background-color: #1e1f26 !important; transform: translateY(-3px) !important; box-shadow: 0 5px 15px rgba(192, 27, 27, 0.3) !important; }
     
-    /* Estilizar las pestañas nativas de Streamlit */
-    .stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: rgba(255,255,255,0.05); border-radius: 8px 8px 0px 0px; padding: 10px 20px; color: #aaa !important; }
-    .stTabs [aria-selected="true"] { background-color: rgba(255,255,255,0.1) !important; color: #fff !important; border-bottom: 3px solid #C01B1B !important; }
+    /* Cargador de archivos */
+    [data-testid="stFileUploader"] { background-color: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 20px; border: 2px dashed #4a4c59; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -124,8 +127,12 @@ else:
     st.sidebar.markdown("---")
     
     st.sidebar.markdown('<div class="btn-menu">', unsafe_allow_html=True)
-    if st.sidebar.button("📦 Programar Despachos"): st.session_state['menu_actual'] = "Despachos"
-    if st.sidebar.button("📁 Bases de Datos (Maestras)"): st.session_state['menu_actual'] = "Maestras"
+    if st.sidebar.button("📦 Programar Despachos"): 
+        st.session_state['menu_actual'] = "Despachos"
+        st.session_state['producto_seleccionado'] = None # Reinicia la selección al volver al menú
+        
+    if st.sidebar.button("📁 Bases de Datos (Maestras)"): 
+        st.session_state['menu_actual'] = "Maestras"
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
     
     st.sidebar.markdown("<br><br><br><br>", unsafe_allow_html=True)
@@ -140,71 +147,81 @@ else:
     # ==========================================
     if st.session_state['menu_actual'] == "Despachos":
         st.title("📦 Motor de Asignación y Despachos")
-        st.write("Sube el archivo de Excel del **Área de Ventas** y selecciona la pestaña del producto que deseas programar.")
+        st.write("Sube el archivo de Excel del **Área de Ventas** y luego haz clic en el producto que deseas programar.")
         
-        # EL CARGADOR DE ARCHIVOS ÚNICO (Arriba de todo)
+        # 1. EL CARGADOR DE ARCHIVOS (Siempre arriba)
         archivo_ventas = st.file_uploader("Arrastra tu Excel de Ventas aquí", type=["xlsx", "xls"], key="up_ventas")
         
         if archivo_ventas is not None:
-            st.success("✅ Archivo cargado correctamente. Selecciona el tipo de producto abajo:")
+            st.success("✅ Archivo cargado correctamente.")
             df_ventas = pd.read_excel(archivo_ventas)
             
-            # --- PESTAÑAS NATIVAS DE STREAMLIT ---
-            tab_huevo, tab_alimento, tab_pollito = st.tabs(["🥚 HUEVO", "🌽 ALIMENTO", "🐥 POLLITO"])
+            st.markdown("### Selecciona la línea de negocio a procesar:")
             
-            # --- PESTAÑA: HUEVO ---
-            with tab_huevo:
-                st.subheader("Programación de Recolección de Huevo")
-                st.info("El sistema agrupará los pedidos por Granja y calculará los viajes necesarios usando camiones tipo 'Huevo' (Capacidad: 200 cajas).")
-                
-                if st.button("🚀 Calcular Viajes (Huevo)", use_container_width=True):
-                    with st.spinner('Analizando datos y cruzando con la flota disponible...'):
-                        time.sleep(2) 
-                        try:
-                            df_carros = pd.read_excel(ARCHIVOS_EXCEL["Carros"])
-                            carros_huevo = df_carros[df_carros.astype(str).apply(lambda x: x.str.contains('Huevo', case=False, na=False)).any(axis=1)]
-                            num_carros_disp = len(carros_huevo)
-                        except FileNotFoundError:
-                            st.error(f"Falta el archivo '{ARCHIVOS_EXCEL['Carros']}'.")
-                            num_carros_disp = 0
-                        except Exception:
-                            num_carros_disp = 10 
+            # 2. LOS 3 BOTONES DE PRODUCTOS (Debajo del cargador)
+            st.markdown('<div class="btn-producto">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("🥚 Programar HUEVO", use_container_width=True):
+                    st.session_state['producto_seleccionado'] = "Huevo"
+            with col2:
+                if st.button("🌽 Programar ALIMENTO", use_container_width=True):
+                    st.session_state['producto_seleccionado'] = "Alimento"
+            with col3:
+                if st.button("🐥 Programar POLLITO", use_container_width=True):
+                    st.session_state['producto_seleccionado'] = "Pollito"
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            st.markdown("---")
+            
+            # 3. LÓGICA DE CADA BOTÓN (Se muestra debajo al hacer clic)
+            if st.session_state['producto_seleccionado'] == "Huevo":
+                st.subheader("🚛 Cálculo de Rutas: HUEVO")
+                with st.spinner('Analizando granjas y cruzando con carros tipo Huevo...'):
+                    time.sleep(1) 
+                    try:
+                        df_carros = pd.read_excel(ARCHIVOS_EXCEL["Carros"])
+                        carros_huevo = df_carros[df_carros.astype(str).apply(lambda x: x.str.contains('Huevo', case=False, na=False)).any(axis=1)]
+                        num_carros_disp = len(carros_huevo)
+                    except FileNotFoundError:
+                        st.error(f"Falta el archivo '{ARCHIVOS_EXCEL['Carros']}'.")
+                        num_carros_disp = 0
+                    except Exception:
+                        num_carros_disp = 10 
+                    
+                    try:
+                        resumen_granjas = df_ventas.groupby('Granja')['Cantidad'].sum().reset_index()
+                        total_viajes_global = 0
                         
-                        try:
-                            resumen_granjas = df_ventas.groupby('Granja')['Cantidad'].sum().reset_index()
-                            st.markdown("---")
-                            st.write("### 📋 Resumen Logístico")
-                            total_viajes_global = 0
-                            
+                        col_info, col_metric = st.columns([2,1])
+                        with col_info:
                             for index, fila in resumen_granjas.iterrows():
                                 granja = fila['Granja']
                                 cantidad = fila['Cantidad']
                                 viajes = math.ceil(cantidad / 200) 
                                 total_viajes_global += viajes
-                                st.write(f"📍 **{granja}**: {cantidad} cajas en total → Requiere **{viajes}** viajes de furgón.")
-                            
-                            st.markdown("---")
-                            st.metric("Total de Camiones 'Huevo' Necesitados", total_viajes_global)
-                            
-                            if num_carros_disp > 0:
-                                if total_viajes_global > num_carros_disp:
-                                    st.error(f"⚠️ ¡ALERTA! Necesitas {total_viajes_global} carros pero tu base de datos indica que solo tienes {num_carros_disp} tipo Huevo.")
-                                else:
-                                    st.success(f"✅ ¡Flota suficiente! Tienes {num_carros_disp} carros tipo Huevo disponibles.")
-                                    st.balloons()
-                                    
-                        except KeyError:
-                            st.error("❌ El archivo subido no tiene las columnas 'Granja' o 'Cantidad'. Verifica el formato.")
+                                st.write(f"📍 **{granja}**: {cantidad} cajas → **{viajes}** viajes.")
+                        
+                        with col_metric:
+                            st.metric("Total Camiones Necesitados", total_viajes_global)
+                        
+                        if num_carros_disp > 0:
+                            if total_viajes_global > num_carros_disp:
+                                st.error(f"⚠️ ¡ALERTA! Necesitas {total_viajes_global} carros pero solo tienes {num_carros_disp} tipo Huevo.")
+                            else:
+                                st.success(f"✅ ¡Flota suficiente! Tienes {num_carros_disp} carros tipo Huevo disponibles.")
+                                st.balloons()
+                                
+                    except KeyError:
+                        st.error("❌ El archivo subido no tiene las columnas 'Granja' o 'Cantidad'.")
 
-            # --- PESTAÑA: ALIMENTO ---
-            with tab_alimento:
-                st.subheader("Programación de Alimento")
-                st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas de peso/volumen exclusivas para el transporte de alimento usando los datos del archivo cargado arriba.")
+            elif st.session_state['producto_seleccionado'] == "Alimento":
+                st.subheader("🚛 Cálculo de Rutas: ALIMENTO")
+                st.info("🚧 Módulo de Alimento en construcción. Aquí aplicaremos las reglas de peso para camiones de estacas/bultos.")
 
-            # --- PESTAÑA: POLLITO ---
-            with tab_pollito:
-                st.subheader("Programación de Pollito")
-                st.info("🚧 Módulo en construcción. Aquí programaremos las reglas logísticas exclusivas para los carros climatizados de pollitos usando los datos del archivo cargado arriba.")
+            elif st.session_state['producto_seleccionado'] == "Pollito":
+                st.subheader("🚛 Cálculo de Rutas: POLLITO")
+                st.info("🚧 Módulo de Pollito en construcción. Aquí aplicaremos las reglas exclusivas para camiones climatizados.")
 
 
     # ==========================================
