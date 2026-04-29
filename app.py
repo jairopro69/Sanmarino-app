@@ -3,122 +3,200 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 # ==========================================
-# CONFIGURACIÓN DE PÁGINA
+# CONFIGURACIÓN ESTRICTA
 # ==========================================
-st.set_page_config(page_title="Planificador Logístico Sanma", layout="wide")
+st.set_page_config(page_title="Motor Logístico Definitivo", layout="wide")
 
-# Inicializamos el estado de la aplicación para que los datos persistan
-if 'df_semana' not in st.session_state:
-    # Definición de rutas base
-    rutas_base = [
-        'Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 
-        'Villa Johana/La Maria San Gil', 'Juan Curi San Gil', 'Miralindo San Gil', 
-        'Dos Hilachas San Gil', 'La Esperanza', 'Costa Rica/Costa Rica', 
-        'La Esmeralda San gil', 'San German'
-    ]
+# ==========================================
+# 1. EL CEREBRO: TODAS TUS REGLAS
+# ==========================================
+JERARQUIA = {'MULTIPLE': 5, 'DOBLE': 4, 'SENCILLO': 3, 'TURBO': 2, 'SEMITURBO': 1}
+
+# Bases de datos maestras simuladas para el motor
+VEHICULOS = {
+    'UPR329': {'Tipo': 'TURBO', 'Titular': 'ISAIAS MARTINEZ SOLANO'},
+    'WNN709': {'Tipo': 'SENCILLO', 'Titular': 'MENESES SEPULVEDA'},
+    'SXT043': {'Tipo': 'SENCILLO', 'Titular': 'RINCON RODRIGUEZ'},
+    'TRL154': {'Tipo': 'TURBO', 'Titular': 'VARGAS CIRO'},
+    'LWY708': {'Tipo': 'SENCILLO', 'Titular': 'PEDRAZA MUÑOZ'},
+    'LPK555': {'Tipo': 'TURBO', 'Titular': 'CARDENAS URIBE'},
+    'XMA049': {'Tipo': 'SENCILLO', 'Titular': 'GOMEZ OSCAR'},
+    'XVV085': {'Tipo': 'TURBO', 'Titular': 'VASQUEZ QUINTERO'},
+    'LPM116': {'Tipo': 'DOBLE', 'Titular': 'GOMEZ HERRERA'},
+    'ABC999': {'Tipo': 'MULTIPLE', 'Titular': 'CONDUCTOR COMODIN'} # Carro extra
+}
+
+CONDUCTORES = {
+    'ISAIAS MARTINEZ SOLANO': {'Horas': 100, 'Domingos': 1, 'Descanso_Ok': True},
+    'MENESES SEPULVEDA': {'Horas': 110, 'Domingos': 0, 'Descanso_Ok': True}, # A punto de pasarse de las 112 hrs
+    'RINCON RODRIGUEZ': {'Horas': 80, 'Domingos': 1, 'Descanso_Ok': True},
+    'VARGAS CIRO': {'Horas': 50, 'Domingos': 0, 'Descanso_Ok': False}, # No ha descansado los 2 días
+    'PEDRAZA MUÑOZ': {'Horas': 60, 'Domingos': 2, 'Descanso_Ok': True}, # Ya trabajó 2 domingos
+    'CARDENAS URIBE': {'Horas': 90, 'Domingos': 1, 'Descanso_Ok': True},
+    'GOMEZ OSCAR': {'Horas': 40, 'Domingos': 0, 'Descanso_Ok': True},
+    'VASQUEZ QUINTERO': {'Horas': 70, 'Domingos': 1, 'Descanso_Ok': True},
+    'GOMEZ HERRERA': {'Horas': 90, 'Domingos': 1, 'Descanso_Ok': True},
+    'CONDUCTOR COMODIN': {'Horas': 10, 'Domingos': 0, 'Descanso_Ok': True}
+}
+
+NODOS_PERMISOS = {
+    'Girón Mesitas': 'MULTIPLE', 'Giron Caciquito': 'MULTIPLE', 'San Roque San Gil': 'SENCILLO', 
+    'Rey David San Gil': 'TURBO', 'Villa Johana/La Maria': 'MULTIPLE', 'Juan Curi': 'SENCILLO', 
+    'Miralindo': 'DOBLE', 'Dos Hilachas': 'MULTIPLE', 'La Esperanza': 'TURBO', 
+    'Costa Rica': 'SENCILLO', 'La Esmeralda': 'TURBO', 'San German': 'MULTIPLE', 'Flandes': 'DOBLE'
+}
+
+# ==========================================
+# 2. INICIALIZAR LA SEMANA (SOLO COLUMNAS EXACTAS)
+# ==========================================
+if 'df_semana' not in st.session_state or 'ultimo_flandes' not in st.session_state:
+    st.session_state.ultimo_flandes = 'LPM116' # Historial inicial
     
-    # Placas y Conductores Fijos (Solo los 5 que mandaste)
-    placas_fijas = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154', '', '', 'LWY708', 'LPK555', 'XMA049', 'XVV085', '']
-    cond_fijos = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA LUIS HERNANDO', 'RINCON RODRIGUEZ SEBASTIAN', 'VARGAS CIRO ALFONSO', '', '', '', '', '', '', '']
+    rutas_fijas = ['Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 'Villa Johana/La Maria']
+    rutas_vacias = ['Juan Curi', 'Miralindo', 'Dos Hilachas', 'La Esperanza', 'Costa Rica', 'La Esmeralda', 'San German', 'Flandes']
     
+    placas_fijas = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154']
+    cond_fijos = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA', 'RINCON RODRIGUEZ', 'VARGAS CIRO']
+    
+    filas = []
     fecha_inicio = pd.to_datetime('2026-05-04')
-    filas_totales = []
     
     for i in range(7):
         fecha = (fecha_inicio + timedelta(days=i)).strftime('%d/%m/%Y')
-        for j, ruta in enumerate(rutas_base):
-            filas_totales.append({
-                'Bloquear': False,
-                'Fecha': fecha,
-                'Hora': '7:00 AM' if ruta == 'Girón Mesitas' else '2:00 PM',
-                'Ruta/Cliente': ruta,
-                'Conductor': cond_fijos[j],
-                'Placa': placas_fijas[j],
-                'Estado': 'Pendiente'
-            })
-    st.session_state.df_semana = pd.DataFrame(filas_totales)
-
-st.title("🚚 Sistema de Programación Logística - Sanma")
-st.info("Regla: Los viajes no asignados hoy pasan a las 7:00 AM del día siguiente.")
-
-# ==========================================
-# MOTOR DE LÓGICA (EL CEREBRO)
-# ==========================================
-def ejecutar_programacion():
-    df = st.session_state.df_semana.copy()
-    
-    # Listas de recursos (Simulación basada en tus reglas)
-    # Aquí es donde el motor decidirá si "alcanzan los carros"
-    carros_disponibles = ['UPR329', 'WNN709', 'SXT043', 'TRL154', 'LWY708', 'LPK555', 'XMA049', 'XVV085']
-    conductores_disponibles = ['ISAIAS MARTINEZ', 'MENESES SEPULVEDA', 'RINCON RODRIGUEZ', 'VARGAS CIRO']
-
-    # Procesar día por día para el Rollover
-    fechas = df['Fecha'].unique()
-    viajes_pendientes_manana = []
-
-    for idx_fecha, fecha in enumerate(fechas):
-        # 1. Agregar pendientes del día anterior a las 7:00 AM
-        for pendiente in viajes_pendientes_manana:
-            nuevo_viaje = pendiente.copy()
-            nuevo_viaje['Fecha'] = fecha
-            nuevo_viaje['Hora'] = '7:00 AM'
-            nuevo_viaje['Estado'] = 'Reprogramado (Mañana)'
-            df = pd.concat([df, pd.DataFrame([nuevo_viaje])], ignore_index=True)
+        dia_semana = (fecha_inicio + timedelta(days=i)).weekday() # 0=Lunes, 2=Miercoles, 5=Sabado
         
-        viajes_pendientes_manana = [] # Limpiar para el día actual
+        # 1. Cargar las 5 rutas que SIEMPRE tienen datos fijos
+        for j, ruta in enumerate(rutas_fijas):
+            filas.append({'Bloquear': False, 'Fecha': fecha, 'Hora': '7:00 AM' if ruta == 'Girón Mesitas' else '2:00 PM',
+                          'Conductor': cond_fijos[j], 'Placa': placas_fijas[j], 'Ruta': ruta, 'Intento': 1})
+            
+        # 2. Cargar el resto EN BLANCO
+        for ruta in rutas_vacias:
+            # Regla de Flandes (Solo Miercoles y Sabado)
+            if ruta == 'Flandes' and dia_semana not in [2, 5]:
+                continue
+            
+            filas.append({'Bloquear': False, 'Fecha': fecha, 'Hora': '2:00 PM',
+                          'Conductor': '', 'Placa': '', 'Ruta': ruta, 'Intento': 1})
 
-        # 2. Intentar asignar los vacíos de este día
-        mask_dia = (df['Fecha'] == fecha) & (df['Bloquear'] == False)
-        for index, row in df[mask_dia].iterrows():
-            if row['Placa'] == '' or row['Conductor'] == '':
-                # LÓGICA: ¿Hay recursos? (Simulación de escasez)
-                # Si el índice es par, simulamos que NO hay carro para ver el Rollover
-                if index % 5 == 0: 
-                    df.at[index, 'Estado'] = 'PASADO A MAÑANA (Falta Recurso)'
-                    viajes_pendientes_manana.append(row)
+    st.session_state.df_semana = pd.DataFrame(filas)
+
+# ==========================================
+# 3. FUNCIONES DE VALIDACIÓN (AQUÍ ESTÁ TODO)
+# ==========================================
+def validar_laboral(conductor, es_domingo):
+    """REGLA: 112 horas, 2 días de descanso, max 2 domingos"""
+    datos = CONDUCTORES.get(conductor)
+    if not datos: return False
+    if datos['Horas'] + 8 > 112: return False # Supera 112 hrs quincenales
+    if not datos['Descanso_Ok']: return False # No ha descansado 2 días tras ruta larga
+    if es_domingo and datos['Domingos'] >= 2: return False # Supera los 2 domingos
+    return True
+
+def validar_jerarquia(placa, ruta):
+    """REGLA: Si es sencillo entran todos menos doble, etc."""
+    if placa not in VEHICULOS: return False
+    tipo_vehiculo = VEHICULOS[placa]['Tipo']
+    permiso_granja = NODOS_PERMISOS.get(ruta, 'SEMITURBO')
+    return JERARQUIA[tipo_vehiculo] <= JERARQUIA[permiso_granja]
+
+def programar_viajes():
+    df = st.session_state.df_semana.copy()
+    fechas = df['Fecha'].unique()
+    viajes_pasados_a_manana = []
+
+    for idx, fecha in enumerate(fechas):
+        es_domingo = pd.to_datetime(fecha, format='%d/%m/%Y').weekday() == 6
+        
+        # INYECTAR REPROGRAMADOS DEL DÍA ANTERIOR A LAS 7:00 AM
+        for pendiente in viajes_pasados_a_manana:
+            nuevo = pendiente.copy()
+            nuevo['Fecha'] = fecha
+            nuevo['Hora'] = '7:00 AM' # REGLA: Pasa a la mañana
+            df = pd.concat([df, pd.DataFrame([nuevo])], ignore_index=True)
+        viajes_pasados_a_manana = []
+
+        # FILTRAR VIAJES DE HOY QUE NO ESTÁN BLOQUEADOS
+        mask = (df['Fecha'] == fecha) & (df['Bloquear'] == False) & (df['Conductor'] == '')
+        
+        for index, row in df[mask].iterrows():
+            ruta = row['Ruta']
+            intento = row['Intento']
+            placa_asignada = ""
+            cond_asignado = ""
+            
+            # REGLA: TERCEROS (Si ya falló una vez y pasó a la mañana, a la siguiente va por tercero)
+            if intento > 1:
+                df.at[index, 'Conductor'] = 'TERCERO (AGENCIA)'
+                df.at[index, 'Placa'] = 'EXTERNA'
+                continue
+
+            # REGLAS EXCLUSIVAS Y FLANDES
+            if ruta == 'Dos Hilachas': placa_asignada = 'LWY708'
+            elif ruta == 'La Esperanza': placa_asignada = 'LPK555'
+            elif ruta == 'Costa Rica': placa_asignada = 'XMA049'
+            elif ruta == 'La Esmeralda': placa_asignada = 'XVV085'
+            elif ruta == 'Flandes':
+                placa_asignada = 'LWY708' if st.session_state.ultimo_flandes == 'LPM116' else 'LPM116'
+                st.session_state.ultimo_flandes = placa_asignada # Actualiza el historial
+                
+            # BUSCAR RECURSOS SI NO ES EXCLUSIVA
+            if not placa_asignada:
+                for p in VEHICULOS.keys():
+                    if validar_jerarquia(p, ruta):
+                        titular = VEHICULOS[p]['Titular']
+                        if validar_laboral(titular, es_domingo):
+                            placa_asignada = p
+                            cond_asignado = titular
+                            break
+            
+            # SI ES EXCLUSIVA, VALIDAR AL TITULAR
+            if placa_asignada and not cond_asignado:
+                titular = VEHICULOS[placa_asignada]['Titular']
+                if validar_laboral(titular, es_domingo):
+                    cond_asignado = titular
                 else:
-                    # Asignación según tus reglas de exclusividad
-                    if 'Dos Hilachas' in row['Ruta/Cliente']:
-                        df.at[index, 'Placa'] = 'LWY708'
-                    elif 'La Esperanza' in row['Ruta/Cliente']:
-                        df.at[index, 'Placa'] = 'LPK555'
-                    
-                    df.at[index, 'Conductor'] = 'ASIGNADO POR IA'
-                    df.at[index, 'Estado'] = 'Programado'
+                    # REGLA: Prioridad Titular, si no, buscar autorizado (Comodin)
+                    cond_asignado = 'CONDUCTOR COMODIN' if validar_laboral('CONDUCTOR COMODIN', es_domingo) else ""
+
+            # REGLA: BAJAR EN LA MAÑANA (Si faltaron carros o conductores)
+            if not placa_asignada or not cond_asignado:
+                row['Intento'] += 1
+                viajes_pasados_a_manana.append(row)
+                df.at[index, 'Conductor'] = '⚠️ PASA A MAÑANA'
+                df.at[index, 'Placa'] = '⚠️ SIN RECURSO'
+            else:
+                df.at[index, 'Placa'] = placa_asignada
+                df.at[index, 'Conductor'] = cond_asignado
 
     st.session_state.df_semana = df
 
 # ==========================================
-# INTERFAZ (MISMA TABLA)
+# 4. INTERFAZ: VISUALIZACIÓN EXACTA
 # ==========================================
-# Filtro por día para no saturar la vista
-dia_ver = st.selectbox("Ver día:", st.session_state.df_semana['Fecha'].unique())
+st.title("🚚 Panel de Programación Huevo")
+st.write("Columnas exactas: Hora, Conductor, Placa, Ruta. (Más el bloqueo).")
 
-df_filtrado = st.session_state.df_semana[st.session_state.df_semana['Fecha'] == dia_ver]
+dia_ver = st.selectbox("📅 Selecciona el día a visualizar:", st.session_state.df_semana['Fecha'].unique())
 
-# EDITOR DE DATOS (AQUÍ APARECERÁ TODO)
+df_mostrar = st.session_state.df_semana[st.session_state.df_semana['Fecha'] == dia_ver]
+
+# ORDEN ESTRICTO DE COLUMNAS SEGÚN TU PETICIÓN
+columnas_estrictas = ['Bloquear', 'Hora', 'Conductor', 'Placa', 'Ruta']
+
 edited_df = st.data_editor(
-    df_filtrado,
-    column_config={
-        "Bloquear": st.column_config.CheckboxColumn("Bloquear"),
-        "Estado": st.column_config.TextColumn("Estado", disabled=True),
-    },
+    df_mostrar[columnas_estrictas],
+    column_config={"Bloquear": st.column_config.CheckboxColumn("🚫 Bloq")},
     hide_index=True,
     use_container_width=True,
     key="editor_semanal"
 )
 
-# Guardar cambios manuales antes de programar
+# Sincronizar edición manual
 if st.button("💾 Guardar Cambios Manuales"):
-    # Actualizamos el dataframe principal con lo que el usuario editó en pantalla
     st.session_state.df_semana.update(edited_df)
-    st.success("Cambios guardados.")
+    st.success("Cambios manuales guardados.")
 
-if st.button("🚀 PROGRAMAR Y REUBICAR FALTANTES", type="primary"):
-    ejecutar_programacion()
-    st.rerun() # Esto hace que la tabla se refresque con los resultados "AHÍ MISMO"
-
-# Botón para descargar el resultado final
-if st.button("📥 Descargar Plan de Trabajo"):
-    csv = st.session_state.df_semana.to_csv(index=False).encode('utf-8')
-    st.download_button("Click para descargar", csv, "logistica_sanma.csv", "text/csv")
+if st.button("🚀 APLICAR MOTOR (REGLAS LOGÍSTICAS)", type="primary"):
+    programar_viajes()
+    st.rerun() # Refresca ahí mismo la tabla
