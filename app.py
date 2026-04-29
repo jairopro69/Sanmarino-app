@@ -9,108 +9,83 @@ st.set_page_config(page_title="Programador Logístico", page_icon="🥚", layout
 st.title("🚚 Panel de Programación Diaria - Huevo")
 
 # ==========================================
-# 1. DICCIONARIOS Y FUNCIONES
+# 1. GENERACIÓN DEL FORMATO DIARIO (SOLO FIJOS)
 # ==========================================
-# (Aquí mantendremos las reglas base que creamos antes para futuras validaciones)
-JERARQUIA_ACCESO = {
-    'MULTIPLE':  ['DOBLE', 'SENCILLO', 'TURBO', 'SEMITURBO'],
-    'DOBLE':     ['DOBLE', 'SENCILLO', 'TURBO', 'SEMITURBO'],
-    'SENCILLO':  ['SENCILLO', 'TURBO', 'SEMITURBO'],
-    'TURBO':     ['TURBO', 'SEMITURBO'],
-    'SEMITURBO': ['SEMITURBO']
-}
-
-RUTAS_EXCLUSIVAS = {
-    'La Esperanza': 'LPK555',
-    'Dos Hilachas': 'LWY708',
-    'Costa Rica': 'XMA049', 
-    'La Esmeralda': 'XVV085'
-}
-
-CARROS_FLANDES = ['LPM116', 'LWY708']
-
-# ==========================================
-# 2. GENERACIÓN DEL FORMATO DIARIO
-# ==========================================
-# Granjas base (delimitadas por tu imagen)
-granjas_base = [
-    'Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 
-    'Villa Johana/La Maria San Gil', 'Juan Curi San Gil', 'Miralindo San Gil', 
-    'Dos Hilachas San Gil', 'La Esperanza', 'Costa Rica/Costa Rica', 
-    'La Esmeralda San gil', 'San German', 'SALIDA FLANDES HUEVO', 
-    'Miralindo San Gil', 'San German'
+# Estos son los ÚNICOS 5 viajes que salen todos los días sin falta
+rutas_fijas = [
+    'Girón Mesitas', 
+    'Giron Caciquito', 
+    'San Roque San Gil', 
+    'Rey David San Gil', 
+    'Villa Johana/La Maria San Gil'
 ]
 
-# Configuración inicial de fechas (Desde hoy)
-fecha_inicio = pd.to_datetime('2026-05-04') # Lunes 4 de Mayo de 2026
+conductores_fijos = [
+    'ISAIAS MARTINEZ SOLANO',
+    'ISAIAS MARTINEZ SOLANO',
+    'MENESES SEPULVEDA LUIS HERNANDO',
+    'RINCON RODRIGUEZ SEBASTIAN',
+    'VARGAS CIRO ALFONSO'
+]
+
+placas_fijas = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154']
+horas_fijas = ['7:00 AM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM']
+
+# Configuración de fechas
+fecha_inicio = pd.to_datetime('2026-05-04')
 dias_semana = [(fecha_inicio + timedelta(days=i)).strftime('%d/%m/%Y') for i in range(7)]
 nombres_dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 
 def generar_plantilla_dia(fecha_str):
-    """Crea un DataFrame vacío con la estructura exacta de tu Excel"""
-    df = pd.DataFrame(index=range(len(granjas_base)))
-    df['Bloquear'] = False # Checkbox para uso en Streamlit
+    """Crea la tabla SOLO con los 5 fijos y deja 10 filas vacías para que Python programe el resto"""
+    # Creamos 15 filas en total (5 fijas + 10 vacías)
+    total_filas = 15
+    df = pd.DataFrame(index=range(total_filas))
+    
+    df['🚫 Bloquear'] = False # Con un solo clic aquí, el viaje se cancela
     df['Planta/Granja'] = ""
     df['Fecha'] = fecha_str
     
-    # Asignación de horas por defecto (basado en tu imagen)
-    horas = ['2:00 PM'] * len(granjas_base)
-    horas[0] = '7:00 AM' # Girón Mesitas
-    horas[12] = '10:00 AM' # Flandes (Aproximación según tu imagen)
-    horas[13] = '7:00 AM' # Miralindo mañana
-    horas[14] = '7:00 AM' # San German mañana
-    df['Hora'] = horas
+    # Llenamos los 5 fijos
+    df['Hora'] = ""
+    df.loc[0:4, 'Hora'] = horas_fijas
     
-    # Valores sugeridos fijos (basado en tu imagen)
     df['Conductor'] = ""
+    df.loc[0:4, 'Conductor'] = conductores_fijos
+    
     df['Placa'] = ""
-    df['Ruta/Cliente'] = granjas_base
+    df.loc[0:4, 'Placa'] = placas_fijas
+    
+    df['Ruta/Cliente'] = ""
+    df.loc[0:4, 'Ruta/Cliente'] = rutas_fijas
+    
     df['Granja'] = ""
     df['Cant'] = ""
-    
-    # Asignaciones fijas sugeridas
-    df.loc[0, ['Conductor', 'Placa']] = ['ISAIAS MARTINEZ SOLANO', 'UPR329']
-    df.loc[1, ['Conductor', 'Placa']] = ['ISAIAS MARTINEZ SOLANO', 'UPR329']
-    df.loc[2, ['Conductor', 'Placa']] = ['MENESES SEPULVEDA LUIS HERNANDO', 'WNN709']
-    df.loc[3, ['Conductor', 'Placa']] = ['RINCON RODRIGUEZ SEBASTIAN', 'SXT043']
-    df.loc[4, ['Conductor', 'Placa']] = ['VARGAS CIRO ALFONSO', 'TRL154']
-    df.loc[7, ['Conductor', 'Placa']] = ['PEDRAZA MUÑOZ JORGE ELIECER', 'LWY708']
-    df.loc[8, ['Conductor', 'Placa']] = ['CARDENAS URIBE SERGIO', 'LPK555']
-    df.loc[9, ['Conductor', 'Placa']] = ['GOMEZ OSCAR', 'XMA049']
-    df.loc[10, ['Conductor', 'Placa']] = ['VASQUEZ QUINTERO DAWIS', 'XVV085']
-    df.loc[12, ['Conductor', 'Placa']] = ['GOMEZ HERRERA FERNANDO', 'LWY708']
-    df.loc[13, ['Conductor', 'Placa']] = ['CARDENAS URIBE SERGIO', 'LPK555']
-    df.loc[14, ['Conductor', 'Placa']] = ['VASQUEZ QUINTERO DAWIS', 'XVV085']
     
     return df
 
 # ==========================================
-# 3. INTERFAZ GRÁFICA (TABS POR DÍA)
+# 2. INTERFAZ GRÁFICA (TABS POR DÍA)
 # ==========================================
 st.markdown("### Selecciona el día a programar:")
 
-# Creamos pestañas (Tabs) para cada día de la semana
 tabs = st.tabs([f"{nombres_dias[i].capitalize()}, {dias_semana[i]}" for i in range(7)])
-
-# Diccionario para guardar las tablas editadas de cada día
 viajes_por_dia = {}
 
 for i, tab in enumerate(tabs):
     with tab:
         fecha_actual = dias_semana[i]
-        nombre_dia = nombres_dias[i]
         
-        st.markdown(f"#### Programación para el **{nombre_dia}, {fecha_actual}**")
-        st.write("Marca **'🚫 Bloquear'** para los viajes que NO se enviarán. Edita Placa y Conductor haciendo doble clic.")
+        st.markdown(f"#### Programación base para el **{nombres_dias[i]}, {fecha_actual}**")
+        st.info("💡 Solo se muestran los 5 viajes fijos diarios. Haz clic en la casilla **'🚫 Bloquear'** si alguno de estos 5 no sale hoy. El resto de las rutas serán asignadas por el motor en los espacios en blanco.")
         
-        # Generamos la plantilla para este día
         df_dia = generar_plantilla_dia(fecha_actual)
         
-        # Editor interactivo
+        # Editor de datos
         viajes_editados = st.data_editor(
             df_dia,
             column_config={
-                "Bloquear": st.column_config.CheckboxColumn("🚫 Bloquear", default=False, width="small"),
+                "🚫 Bloquear": st.column_config.CheckboxColumn("🚫 Bloquear", default=False, width="small"),
                 "Planta/Granja": st.column_config.TextColumn("Planta/Granja"),
                 "Fecha": st.column_config.TextColumn("Fecha", disabled=True),
                 "Hora": st.column_config.SelectboxColumn("Hora", options=["7:00 AM", "10:00 AM", "2:00 PM"]),
@@ -122,44 +97,46 @@ for i, tab in enumerate(tabs):
             },
             hide_index=True,
             use_container_width=True,
-            num_rows="dynamic", # Permite agregar filas si es necesario
+            num_rows="dynamic",
             key=f"editor_dia_{i}"
         )
         
-        # Guardamos la tabla editada de este día
         viajes_por_dia[fecha_actual] = viajes_editados
 
 # ==========================================
-# 4. BOTÓN DE CONSOLIDACIÓN Y EXPORTACIÓN
+# 3. BOTÓN DE CONSOLIDACIÓN Y EJECUCIÓN DEL MOTOR
 # ==========================================
 st.markdown("---")
-if st.button("🚀 CONSOLIDAR Y VALIDAR SEMANA", type="primary", use_container_width=True):
+if st.button("🚀 PROGRAMAR RESTO DE VIAJES (MOTOR IA)", type="primary", use_container_width=True):
     
-    # 1. Unimos todos los días en una sola tabla, filtrando los bloqueados
     lista_df_activos = []
+    
     for fecha, df in viajes_por_dia.items():
-        df_activo = df[df['Bloquear'] != True].copy()
+        # Filtramos los que el usuario NO bloqueó y los que NO están totalmente vacíos
+        df_activo = df[df['🚫 Bloquear'] != True].copy()
+        df_activo = df_activo.dropna(subset=['Ruta/Cliente']) # Quitamos filas nulas
+        df_activo = df_activo[df_activo['Ruta/Cliente'] != ""] # Quitamos filas vacías
         lista_df_activos.append(df_activo)
         
     df_consolidado = pd.concat(lista_df_activos, ignore_index=True)
     
-    if df_consolidado.empty:
-        st.warning("⚠️ Todos los viajes de la semana están bloqueados.")
-    else:
-        st.success(f"✅ Semana consolidada: {len(df_consolidado)} viajes a programar.")
-        
-        # (Aquí iría la lógica del motor para validar exclusividades)
-        # Por ahora, mostramos la tabla final limpia para exportar
-        df_exportar = df_consolidado.drop(columns=['Bloquear'])
-        
-        st.write("### 🏁 Resumen Semanal:")
-        st.dataframe(df_exportar, hide_index=True, use_container_width=True)
-        
-        # Exportación
-        csv = df_exportar.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Descargar Programación Formato Excel (CSV)",
-            data=csv,
-            file_name='Programacion_Semanal_Consolidada.csv',
-            mime='text/csv',
-        )
+    st.success("✅ Viajes fijos aprobados. ¡Despertando a Python para calcular las rutas faltantes (Flandes, Dos Hilachas, etc.)!")
+    
+    # ---------------------------------------------------------
+    # AQUÍ ENTRARÁ EL CÓDIGO DE ASIGNACIÓN AUTOMÁTICA DE PYTHON
+    # (El cruce con las Maestras, las 112 horas, exclusividad)
+    # ---------------------------------------------------------
+    
+    # Mostramos la tabla para exportar (Por ahora solo los fijos aprobados)
+    df_exportar = df_consolidado.drop(columns=['🚫 Bloquear'])
+    
+    st.write("### 🏁 Resumen Parcial (Fijos):")
+    st.dataframe(df_exportar, hide_index=True, use_container_width=True)
+    
+    csv = df_exportar.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="📥 Descargar Programación",
+        data=csv,
+        file_name='Programacion_Semanal.csv',
+        mime='text/csv',
+    )
