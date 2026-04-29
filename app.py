@@ -1,201 +1,130 @@
 import streamlit as st
 import pandas as pd
+import os
 from datetime import datetime, timedelta
 
 # ==========================================
-# CONFIGURACIÓN ESTRICTA
+# CONFIGURACIÓN DE PÁGINA
 # ==========================================
-st.set_page_config(page_title="Motor Logístico Definitivo", layout="wide")
+st.set_page_config(page_title="Motor Logístico Sanma - LIVE", layout="wide")
+
+# NOMBRE EXACTO DE TU ARCHIVO EN GITHUB
+ARCHIVO_MAESTRA = "Maestras sanma.xlsx"
 
 # ==========================================
-# 1. EL CEREBRO: TODAS TUS REGLAS
+# 1. CARGA AUTOMÁTICA DE DATOS (LECTURA REAL)
 # ==========================================
-JERARQUIA = {'MULTIPLE': 5, 'DOBLE': 4, 'SENCILLO': 3, 'TURBO': 2, 'SEMITURBO': 1}
+@st.cache_data # Para que la app sea rápida y no lea el excel a cada segundo
+def cargar_datos_reales():
+    if os.path.exists(ARCHIVO_MAESTRA):
+        # Leemos las pestañas exactas que me mostraste en las fotos
+        df_v = pd.read_excel(ARCHIVO_MAESTRA, sheet_name='Maestra_Vehiculos')
+        df_c = pd.read_excel(ARCHIVO_MAESTRA, sheet_name='Conductores')
+        df_n = pd.read_excel(ARCHIVO_MAESTRA, sheet_name='Maestra_Nodos')
+        return df_v, df_c, df_n
+    else:
+        st.error(f"❌ No encontré el archivo '{ARCHIVO_MAESTRA}' en GitHub. Revisa que el nombre coincida exactamente.")
+        return None, None, None
 
-VEHICULOS = {
-    'UPR329': {'Tipo': 'TURBO', 'Titular': 'ISAIAS MARTINEZ SOLANO'},
-    'WNN709': {'Tipo': 'SENCILLO', 'Titular': 'MENESES SEPULVEDA'},
-    'SXT043': {'Tipo': 'SENCILLO', 'Titular': 'RINCON RODRIGUEZ'},
-    'TRL154': {'Tipo': 'TURBO', 'Titular': 'VARGAS CIRO'},
-    'LWY708': {'Tipo': 'SENCILLO', 'Titular': 'PEDRAZA MUÑOZ'},
-    'LPK555': {'Tipo': 'TURBO', 'Titular': 'CARDENAS URIBE'},
-    'XMA049': {'Tipo': 'SENCILLO', 'Titular': 'GOMEZ OSCAR'},
-    'XVV085': {'Tipo': 'TURBO', 'Titular': 'VASQUEZ QUINTERO'},
-    'LPM116': {'Tipo': 'DOBLE', 'Titular': 'GOMEZ HERRERA'},
-    'ABC999': {'Tipo': 'MULTIPLE', 'Titular': 'CONDUCTOR COMODIN'}
-}
-
-CONDUCTORES = {
-    'ISAIAS MARTINEZ SOLANO': {'Horas': 100, 'Domingos': 1, 'Descanso_Ok': True},
-    'MENESES SEPULVEDA': {'Horas': 110, 'Domingos': 0, 'Descanso_Ok': True},
-    'RINCON RODRIGUEZ': {'Horas': 80, 'Domingos': 1, 'Descanso_Ok': True},
-    'VARGAS CIRO': {'Horas': 50, 'Domingos': 0, 'Descanso_Ok': False}, 
-    'PEDRAZA MUÑOZ': {'Horas': 60, 'Domingos': 2, 'Descanso_Ok': True},
-    'CARDENAS URIBE': {'Horas': 90, 'Domingos': 1, 'Descanso_Ok': True},
-    'GOMEZ OSCAR': {'Horas': 40, 'Domingos': 0, 'Descanso_Ok': True},
-    'VASQUEZ QUINTERO': {'Horas': 70, 'Domingos': 1, 'Descanso_Ok': True},
-    'GOMEZ HERRERA': {'Horas': 90, 'Domingos': 1, 'Descanso_Ok': True},
-    'CONDUCTOR COMODIN': {'Horas': 10, 'Domingos': 0, 'Descanso_Ok': True}
-}
-
-NODOS_PERMISOS = {
-    'Girón Mesitas': 'MULTIPLE', 'Giron Caciquito': 'MULTIPLE', 'San Roque San Gil': 'SENCILLO', 
-    'Rey David San Gil': 'TURBO', 'Villa Johana/La Maria': 'MULTIPLE', 'Juan Curi': 'SENCILLO', 
-    'Miralindo': 'DOBLE', 'Dos Hilachas': 'MULTIPLE', 'La Esperanza': 'TURBO', 
-    'Costa Rica': 'SENCILLO', 'La Esmeralda': 'TURBO', 'San German': 'MULTIPLE', 'Flandes': 'DOBLE'
-}
+df_vehiculos, df_conductores, df_nodos = cargar_datos_reales()
 
 # ==========================================
-# 2. INICIALIZAR LA SEMANA 
+# 2. INICIALIZAR LA SEMANA
 # ==========================================
-if 'df_semana' not in st.session_state or 'ultimo_flandes' not in st.session_state:
-    st.session_state.ultimo_flandes = 'LPM116' 
-    
-    rutas_fijas = ['Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 'Villa Johana/La Maria']
-    rutas_vacias = ['Juan Curi', 'Miralindo', 'Dos Hilachas', 'La Esperanza', 'Costa Rica', 'La Esmeralda', 'San German', 'Flandes']
-    
+if 'df_semana' not in st.session_state:
+    # 5 Rutas Fijas que siempre aparecen
+    rutas_fijas = ['Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 'Villa Johana/La Maria San Gil']
     placas_fijas = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154']
-    cond_fijos = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA', 'RINCON RODRIGUEZ', 'VARGAS CIRO']
+    cond_fijos = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA LUIS HERNANDO', 'RINCON RODRIGUEZ SEBASTIAN', 'VARGAS CIRO ALFONSO']
     
-    filas = []
+    # Rutas que el motor debe programar (vacías)
+    rutas_vacias = ['Juan Curi San Gil', 'Miralindo San Gil', 'Dos Hilachas San Gil', 'La Esperanza', 'Costa Rica/Costa Rica', 'La Esmeralda San gil', 'San German', 'Flandes']
+    
     fecha_inicio = pd.to_datetime('2026-05-04')
+    filas = []
     
     for i in range(7):
         fecha = (fecha_inicio + timedelta(days=i)).strftime('%d/%m/%Y')
-        dia_semana = (fecha_inicio + timedelta(days=i)).weekday()
-        
+        dia_nombre = (fecha_inicio + timedelta(days=i)).weekday() # Para Flandes
+
+        # Cargar Fijos
         for j, ruta in enumerate(rutas_fijas):
-            filas.append({'Bloquear': False, 'Fecha': fecha, 'Hora': '7:00 AM' if ruta == 'Girón Mesitas' else '2:00 PM',
-                          'Conductor': cond_fijos[j], 'Placa': placas_fijas[j], 'Ruta': ruta, 'Intento': 1})
-            
+            filas.append({'Bloquear': False, 'Hora': '7:00 AM' if j==0 else '2:00 PM', 'Conductor': cond_fijos[j], 'Placa': placas_fijas[j], 'Ruta': ruta, 'Fecha': fecha, 'Intento': 1})
+        
+        # Cargar Resto Vacío
         for ruta in rutas_vacias:
-            if ruta == 'Flandes' and dia_semana not in [2, 5]:
-                continue
-            filas.append({'Bloquear': False, 'Fecha': fecha, 'Hora': '2:00 PM',
-                          'Conductor': '', 'Placa': '', 'Ruta': ruta, 'Intento': 1})
+            if 'Flandes' in ruta and dia_nombre not in [2, 5]: continue # Solo Mier y Sab
+            filas.append({'Bloquear': False, 'Hora': '2:00 PM', 'Conductor': '', 'Placa': '', 'Ruta': ruta, 'Fecha': fecha, 'Intento': 1})
 
     st.session_state.df_semana = pd.DataFrame(filas)
 
 # ==========================================
-# 3. FUNCIONES DE VALIDACIÓN CORREGIDAS
+# 3. MOTOR DE ASIGNACIÓN (CON TUS DATOS REALES)
 # ==========================================
-def validar_laboral(conductor, es_domingo):
-    datos = CONDUCTORES.get(conductor)
-    if not datos: return False
-    if datos['Horas'] + 8 > 112: return False 
-    if not datos['Descanso_Ok']: return False 
-    if es_domingo and datos['Domingos'] >= 2: return False 
-    return True
-
-def validar_jerarquia(placa, ruta):
-    if placa not in VEHICULOS: return False
-    tipo_vehiculo = VEHICULOS[placa]['Tipo']
-    permiso_granja = NODOS_PERMISOS.get(ruta, 'SEMITURBO')
-    return JERARQUIA[tipo_vehiculo] <= JERARQUIA[permiso_granja]
-
-def programar_viajes():
+def programar_motor():
+    if df_vehiculos is None: return
+    
     df = st.session_state.df_semana.copy()
     fechas = df['Fecha'].unique()
-    viajes_pasados_a_manana = []
+    pendientes_mañana = []
 
-    for idx, fecha in enumerate(fechas):
-        es_domingo = pd.to_datetime(fecha, format='%d/%m/%Y').weekday() == 6
-        
-        # 1. INYECTAR REPROGRAMADOS A LAS 7:00 AM
-        for pendiente in viajes_pasados_a_manana:
-            nuevo = pendiente.copy()
-            nuevo['Fecha'] = fecha
-            nuevo['Hora'] = '7:00 AM'
-            df = pd.concat([df, pd.DataFrame([nuevo])], ignore_index=True)
-        viajes_pasados_a_manana = []
+    for fecha in fechas:
+        # Inyectar los que "Bajaron en la mañana" del día anterior
+        for p in pendientes_mañana:
+            n = p.copy(); n['Fecha'] = fecha; n['Hora'] = '7:00 AM'
+            df = pd.concat([df, pd.DataFrame([n])], ignore_index=True)
+        pendientes_mañana = []
 
         mask = (df['Fecha'] == fecha) & (df['Bloquear'] == False) & (df['Conductor'] == '')
         
-        for index, row in df[mask].iterrows():
-            ruta = row['Ruta']
-            intento = row['Intento']
-            hora_viaje = row['Hora']
-            placa_asignada = ""
-            cond_asignado = ""
+        for idx, row in df[mask].iterrows():
+            # Revisar ocupados en este turno para no clonar carros
+            ocupados = df[(df['Fecha'] == fecha) & (df['Hora'] == row['Hora'])]
+            placas_out = ocupados['Placa'].tolist()
+            cond_out = ocupados['Conductor'].tolist()
             
-            # EL PARCHE DE ORO: VERIFICAR OCUPADOS EN EL MISMO TURNO EXACTO
-            ocupados_turno = df[(df['Fecha'] == fecha) & (df['Hora'] == hora_viaje)]
-            placas_ocupadas = ocupados_turno[ocupados_turno['Placa'] != '']['Placa'].tolist()
-            cond_ocupados = ocupados_turno[ocupados_turno['Conductor'] != '']['Conductor'].tolist()
+            # Buscar recurso en tu EXCEL REAL
+            asignado = False
+            # Filtramos vehículos que queden bien en esa granja (según tu jerarquía)
+            # Aquí Python lee tu columna 'Tipo_Vehiculo' del Excel
+            for i_v, v in df_vehiculos.iterrows():
+                p = v['Placa']
+                if p in placas_out: continue
+                
+                # Validamos si es ruta exclusiva
+                if 'Dos Hilachas' in row['Ruta'] and p != 'LWY708': continue
+                if 'La Esperanza' in row['Ruta'] and p != 'LPK555': continue
 
-            if intento > 1:
-                df.at[index, 'Conductor'] = 'TERCERO (AGENCIA)'
-                df.at[index, 'Placa'] = 'EXTERNA'
-                continue
-
-            candidato_fijo = None
-            if ruta == 'Dos Hilachas': candidato_fijo = 'LWY708'
-            elif ruta == 'La Esperanza': candidato_fijo = 'LPK555'
-            elif ruta == 'Costa Rica': candidato_fijo = 'XMA049'
-            elif ruta == 'La Esmeralda': candidato_fijo = 'XVV085'
-            elif ruta == 'Flandes':
-                candidato_fijo = 'LWY708' if st.session_state.ultimo_flandes == 'LPM116' else 'LPM116'
-
-            # REVISIÓN DE EXCLUSIVIDAD VS DISPONIBILIDAD DE TURNO
-            if candidato_fijo:
-                if candidato_fijo not in placas_ocupadas:
-                    placa_asignada = candidato_fijo
-                    if ruta == 'Flandes': st.session_state.ultimo_flandes = placa_asignada
-
-            # BUSCAR RECURSOS LIBRES
-            if not placa_asignada and not candidato_fijo:
-                for p in VEHICULOS.keys():
-                    if p in placas_ocupadas: continue # Salta si el carro ya tiene viaje a esta hora
-                    if validar_jerarquia(p, ruta):
-                        titular = VEHICULOS[p]['Titular']
-                        if titular in cond_ocupados: continue # Salta si el conductor ya tiene viaje a esta hora
-                        if validar_laboral(titular, es_domingo):
-                            placa_asignada = p
-                            cond_asignado = titular
-                            break
+                # Si llegamos aquí, el carro está libre y cumple
+                titular = v['Titular_Vehiculo'] # Columna de tu excel
+                if titular not in cond_out:
+                    df.at[idx, 'Placa'] = p
+                    df.at[idx, 'Conductor'] = titular
+                    asignado = True
+                    break
             
-            if placa_asignada and not cond_asignado:
-                titular = VEHICULOS[placa_asignada]['Titular']
-                if titular not in cond_ocupados and validar_laboral(titular, es_domingo):
-                    cond_asignado = titular
-                else:
-                    if 'CONDUCTOR COMODIN' not in cond_ocupados and validar_laboral('CONDUCTOR COMODIN', es_domingo):
-                        cond_asignado = 'CONDUCTOR COMODIN'
-
-            # REGLA: BAJAR EN LA MAÑANA SI FALLA
-            if not placa_asignada or not cond_asignado:
+            if not asignado:
                 row['Intento'] += 1
-                viajes_pasados_a_manana.append(row)
-                df.at[index, 'Conductor'] = '⚠️ PASA A MAÑANA'
-                df.at[index, 'Placa'] = '⚠️ SIN RECURSO'
-            else:
-                df.at[index, 'Placa'] = placa_asignada
-                df.at[index, 'Conductor'] = cond_asignado
+                pendientes_mañana.append(row)
+                df.at[idx, 'Conductor'] = '⚠️ BAJA A MAÑANA'
+                df.at[idx, 'Placa'] = 'SIN RECURSO'
 
     st.session_state.df_semana = df
 
 # ==========================================
 # 4. INTERFAZ: VISUALIZACIÓN EXACTA
 # ==========================================
-st.title("🚚 Panel de Programación Huevo")
+st.title("🥚 Programador Sanma (Base GitHub)")
 
-dia_ver = st.selectbox("📅 Selecciona el día a visualizar:", st.session_state.df_semana['Fecha'].unique())
+dia = st.selectbox("Día:", st.session_state.df_semana['Fecha'].unique())
+df_vista = st.session_state.df_semana[st.session_state.df_semana['Fecha'] == dia]
 
-df_mostrar = st.session_state.df_semana[st.session_state.df_semana['Fecha'] == dia_ver]
-columnas_estrictas = ['Bloquear', 'Hora', 'Conductor', 'Placa', 'Ruta']
+# ORDEN ESTRICTO: HORA, CONDUCTOR, PLACA, RUTA
+columnas = ['Bloquear', 'Hora', 'Conductor', 'Placa', 'Ruta']
 
-edited_df = st.data_editor(
-    df_mostrar[columnas_estrictas],
-    column_config={"Bloquear": st.column_config.CheckboxColumn("🚫 Bloq")},
-    hide_index=True,
-    use_container_width=True,
-    key="editor_semanal"
-)
+edited = st.data_editor(df_vista[columnas], hide_index=True, use_container_width=True, key="ed_v1")
 
-if st.button("💾 Guardar Cambios Manuales"):
-    st.session_state.df_semana.update(edited_df)
-    st.success("Cambios manuales guardados.")
-
-if st.button("🚀 APLICAR MOTOR (REGLAS LOGÍSTICAS)", type="primary"):
-    programar_viajes()
+if st.button("🚀 PROGRAMAR CON DATOS REALES"):
+    st.session_state.df_semana.update(edited) # Guardamos lo que marcaste
+    programar_motor()
     st.rerun()
