@@ -1,142 +1,124 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-import random
 
 # ==========================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN DE PÁGINA
 # ==========================================
-st.set_page_config(page_title="Programador Logístico", page_icon="🥚", layout="wide")
-st.title("🚚 Panel de Programación Diaria - Huevo")
+st.set_page_config(page_title="Planificador Logístico Sanma", layout="wide")
 
-# ==========================================
-# 1. REGLAS DEL NEGOCIO (EL CEREBRO)
-# ==========================================
-# Aquí están las reglas que me diste
-JERARQUIA_ACCESO = {
-    'MULTIPLE':  ['DOBLE', 'SENCILLO', 'TURBO', 'SEMITURBO'],
-    'DOBLE':     ['DOBLE', 'SENCILLO', 'TURBO', 'SEMITURBO'],
-    'SENCILLO':  ['SENCILLO', 'TURBO', 'SEMITURBO'],
-    'TURBO':     ['TURBO', 'SEMITURBO'],
-    'SEMITURBO': ['SEMITURBO']
-}
-
-RUTAS_EXCLUSIVAS = {
-    'La Esperanza': 'LPK555',
-    'Dos Hilachas': 'LWY708',
-    'Costa Rica': 'XMA049', 
-    'La Esmeralda': 'XVV085'
-}
-
-CARROS_FLANDES = ['LPM116', 'LWY708']
-
-# Flota simulada para rellenar vacíos (mientras subimos tu Excel real)
-FLOTA_DISPONIBLE = ['ABC111', 'DEF222', 'GHI333', 'JKL444', 'MNO555']
-CONDUCTORES_DISPONIBLES = ['PABLO PEREZ', 'JUAN GOMEZ', 'CARLOS RUIZ', 'ANDRES DIAZ']
-
-# ==========================================
-# 2. PLANTILLA BASE
-# ==========================================
-rutas_base = [
-    'Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 
-    'Villa Johana/La Maria San Gil', 'Juan Curi San Gil', 'Miralindo San Gil', 
-    'Dos Hilachas San Gil', 'La Esperanza', 'Costa Rica/Costa Rica', 
-    'La Esmeralda San gil', 'San German'
-]
-placas_base = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154', '', '', 'LWY708', 'LPK555', 'XMA049', 'XVV085', '']
-conductores_base = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA LUIS HERNANDO', 'RINCON RODRIGUEZ SEBASTIAN', 'VARGAS CIRO ALFONSO', '', '', '', '', '', '', '']
-horas_base = ['7:00 AM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM', '2:00 PM']
-
-dias_semana = [(pd.to_datetime('2026-05-04') + timedelta(days=i)).strftime('%d/%m/%Y') for i in range(7)]
-nombres_dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-
-def generar_plantilla_dia():
-    return pd.DataFrame({
-        '🚫 Bloquear': [False] * len(rutas_base),
-        'Hora': horas_base,
-        'Conductor': conductores_base,
-        'Placa': placas_base,
-        'Ruta/Cliente': rutas_base
-    })
-
-# ==========================================
-# 3. EL MOTOR DE ASIGNACIÓN (TUS CONDICIONALES)
-# ==========================================
-def asignar_viajes_vacios(df):
-    """Aquí Python aplica tus reglas para rellenar los espacios en blanco"""
-    for index, fila in df.iterrows():
-        destino = str(fila['Ruta/Cliente'])
-        placa_actual = fila['Placa']
-        conductor_actual = fila['Conductor']
-
-        # 1. REGLA: Asignar placa si está vacía
-        if placa_actual == "":
-            # Verificamos si es ruta exclusiva
-            es_exclusiva = False
-            for granja, placa_fija in RUTAS_EXCLUSIVAS.items():
-                if granja.upper() in destino.upper():
-                    df.at[index, 'Placa'] = placa_fija
-                    es_exclusiva = True
-                    break
-            
-            # Verificamos si es Flandes
-            if not es_exclusiva and 'FLANDES' in destino.upper():
-                df.at[index, 'Placa'] = random.choice(CARROS_FLANDES) # Asigna uno de los dos permitidos
-                es_exclusiva = True
-                
-            # Si no es exclusiva, asignamos un carro general disponible que cumpla el tamaño (Aquí cruzaremos con tu Excel)
-            if not es_exclusiva:
-                df.at[index, 'Placa'] = random.choice(FLOTA_DISPONIBLE) 
-
-        # 2. REGLA: Asignar conductor si está vacío (Prioridad al Titular)
-        if conductor_actual == "":
-            placa_asignada = df.at[index, 'Placa']
-            # Aquí Python debe buscar quién es el titular de 'placa_asignada'.
-            # Simulamos que encuentra al titular disponible:
-            df.at[index, 'Conductor'] = f"TITULAR DE {placa_asignada}"
-
-    return df
-
-# ==========================================
-# INTERFAZ GRÁFICA
-# ==========================================
-st.markdown("### Selecciona el día a programar:")
-tabs = st.tabs([f"{nombres_dias[i].capitalize()}" for i in range(7)])
-viajes_por_dia = {}
-
-for i, tab in enumerate(tabs):
-    with tab:
-        fecha_actual = dias_semana[i]
-        df_dia = generar_plantilla_dia()
-        
-        viajes_editados = st.data_editor(
-            df_dia,
-            column_config={
-                "🚫 Bloquear": st.column_config.CheckboxColumn("🚫 Bloquear", width="small"),
-                "Hora": st.column_config.TextColumn("Hora", disabled=True),
-                "Ruta/Cliente": st.column_config.TextColumn("Ruta/Cliente", disabled=True)
-            },
-            hide_index=True, use_container_width=True, key=f"editor_dia_{i}"
-        )
-        viajes_editados['Fecha'] = fecha_actual
-        viajes_por_dia[fecha_actual] = viajes_editados
-
-# ==========================================
-# BOTÓN DE EJECUCIÓN (GATILLO DEL MOTOR)
-# ==========================================
-st.markdown("---")
-if st.button("🚀 PROGRAMAR VIAJES (LLENAR VACÍOS)", type="primary", use_container_width=True):
+# Inicializamos el estado de la aplicación para que los datos persistan
+if 'df_semana' not in st.session_state:
+    # Definición de rutas base
+    rutas_base = [
+        'Girón Mesitas', 'Giron Caciquito', 'San Roque San Gil', 'Rey David San Gil', 
+        'Villa Johana/La Maria San Gil', 'Juan Curi San Gil', 'Miralindo San Gil', 
+        'Dos Hilachas San Gil', 'La Esperanza', 'Costa Rica/Costa Rica', 
+        'La Esmeralda San gil', 'San German'
+    ]
     
-    lista_df_activos = []
-    for fecha, df in viajes_por_dia.items():
-        df_activo = df[df['🚫 Bloquear'] != True].copy()
-        
-        # ¡AQUÍ LLAMAMOS A LA FUNCIÓN QUE RELLENA LOS VACÍOS CON TUS REGLAS!
-        df_programado = asignar_viajes_vacios(df_activo) 
-        
-        lista_df_activos.append(df_programado)
-        
-    df_consolidado = pd.concat(lista_df_activos, ignore_index=True)
+    # Placas y Conductores Fijos (Solo los 5 que mandaste)
+    placas_fijas = ['UPR329', 'UPR329', 'WNN709', 'SXT043', 'TRL154', '', '', 'LWY708', 'LPK555', 'XMA049', 'XVV085', '']
+    cond_fijos = ['ISAIAS MARTINEZ SOLANO', 'ISAIAS MARTINEZ SOLANO', 'MENESES SEPULVEDA LUIS HERNANDO', 'RINCON RODRIGUEZ SEBASTIAN', 'VARGAS CIRO ALFONSO', '', '', '', '', '', '', '']
     
-    st.success("✅ ¡Listo! Python aplicó las reglas exclusivas y rellenó los espacios vacíos.")
-    st.dataframe(df_consolidado.drop(columns=['🚫 Bloquear']), hide_index=True, use_container_width=True)
+    fecha_inicio = pd.to_datetime('2026-05-04')
+    filas_totales = []
+    
+    for i in range(7):
+        fecha = (fecha_inicio + timedelta(days=i)).strftime('%d/%m/%Y')
+        for j, ruta in enumerate(rutas_base):
+            filas_totales.append({
+                'Bloquear': False,
+                'Fecha': fecha,
+                'Hora': '7:00 AM' if ruta == 'Girón Mesitas' else '2:00 PM',
+                'Ruta/Cliente': ruta,
+                'Conductor': cond_fijos[j],
+                'Placa': placas_fijas[j],
+                'Estado': 'Pendiente'
+            })
+    st.session_state.df_semana = pd.DataFrame(filas_totales)
+
+st.title("🚚 Sistema de Programación Logística - Sanma")
+st.info("Regla: Los viajes no asignados hoy pasan a las 7:00 AM del día siguiente.")
+
+# ==========================================
+# MOTOR DE LÓGICA (EL CEREBRO)
+# ==========================================
+def ejecutar_programacion():
+    df = st.session_state.df_semana.copy()
+    
+    # Listas de recursos (Simulación basada en tus reglas)
+    # Aquí es donde el motor decidirá si "alcanzan los carros"
+    carros_disponibles = ['UPR329', 'WNN709', 'SXT043', 'TRL154', 'LWY708', 'LPK555', 'XMA049', 'XVV085']
+    conductores_disponibles = ['ISAIAS MARTINEZ', 'MENESES SEPULVEDA', 'RINCON RODRIGUEZ', 'VARGAS CIRO']
+
+    # Procesar día por día para el Rollover
+    fechas = df['Fecha'].unique()
+    viajes_pendientes_manana = []
+
+    for idx_fecha, fecha in enumerate(fechas):
+        # 1. Agregar pendientes del día anterior a las 7:00 AM
+        for pendiente in viajes_pendientes_manana:
+            nuevo_viaje = pendiente.copy()
+            nuevo_viaje['Fecha'] = fecha
+            nuevo_viaje['Hora'] = '7:00 AM'
+            nuevo_viaje['Estado'] = 'Reprogramado (Mañana)'
+            df = pd.concat([df, pd.DataFrame([nuevo_viaje])], ignore_index=True)
+        
+        viajes_pendientes_manana = [] # Limpiar para el día actual
+
+        # 2. Intentar asignar los vacíos de este día
+        mask_dia = (df['Fecha'] == fecha) & (df['Bloquear'] == False)
+        for index, row in df[mask_dia].iterrows():
+            if row['Placa'] == '' or row['Conductor'] == '':
+                # LÓGICA: ¿Hay recursos? (Simulación de escasez)
+                # Si el índice es par, simulamos que NO hay carro para ver el Rollover
+                if index % 5 == 0: 
+                    df.at[index, 'Estado'] = 'PASADO A MAÑANA (Falta Recurso)'
+                    viajes_pendientes_manana.append(row)
+                else:
+                    # Asignación según tus reglas de exclusividad
+                    if 'Dos Hilachas' in row['Ruta/Cliente']:
+                        df.at[index, 'Placa'] = 'LWY708'
+                    elif 'La Esperanza' in row['Ruta/Cliente']:
+                        df.at[index, 'Placa'] = 'LPK555'
+                    
+                    df.at[index, 'Conductor'] = 'ASIGNADO POR IA'
+                    df.at[index, 'Estado'] = 'Programado'
+
+    st.session_state.df_semana = df
+
+# ==========================================
+# INTERFAZ (MISMA TABLA)
+# ==========================================
+# Filtro por día para no saturar la vista
+dia_ver = st.selectbox("Ver día:", st.session_state.df_semana['Fecha'].unique())
+
+df_filtrado = st.session_state.df_semana[st.session_state.df_semana['Fecha'] == dia_ver]
+
+# EDITOR DE DATOS (AQUÍ APARECERÁ TODO)
+edited_df = st.data_editor(
+    df_filtrado,
+    column_config={
+        "Bloquear": st.column_config.CheckboxColumn("Bloquear"),
+        "Estado": st.column_config.TextColumn("Estado", disabled=True),
+    },
+    hide_index=True,
+    use_container_width=True,
+    key="editor_semanal"
+)
+
+# Guardar cambios manuales antes de programar
+if st.button("💾 Guardar Cambios Manuales"):
+    # Actualizamos el dataframe principal con lo que el usuario editó en pantalla
+    st.session_state.df_semana.update(edited_df)
+    st.success("Cambios guardados.")
+
+if st.button("🚀 PROGRAMAR Y REUBICAR FALTANTES", type="primary"):
+    ejecutar_programacion()
+    st.rerun() # Esto hace que la tabla se refresque con los resultados "AHÍ MISMO"
+
+# Botón para descargar el resultado final
+if st.button("📥 Descargar Plan de Trabajo"):
+    csv = st.session_state.df_semana.to_csv(index=False).encode('utf-8')
+    st.download_button("Click para descargar", csv, "logistica_sanma.csv", "text/csv")
